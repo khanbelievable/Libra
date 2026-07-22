@@ -215,6 +215,38 @@ def _resolve_invoice_claims(
     return trusted, quarantined
 
 
+def _business_keys(
+    rows: Sequence[dict[str, str]], fields: tuple[str, ...]
+) -> list[tuple[str, ...]]:
+    return sorted(tuple(row[field] for field in fields) for row in rows)
+
+
+def _quarantine_signatures(rows: Sequence[dict[str, str]]) -> list[tuple[str, str, str]]:
+    return sorted(
+        (
+            row.get("_batch_id", ""),
+            row.get("_source_row_number", ""),
+            row.get("_reason_codes", ""),
+        )
+        for row in rows
+    )
+
+
+def _merged_silver_rows(
+    existing: Sequence[dict[str, str]],
+    batch_id: str,
+    incoming: Sequence[dict[str, str]],
+    business_key: tuple[str, ...],
+) -> list[dict[str, str]]:
+    retained = [row for row in existing if row.get("_batch_id") != batch_id]
+    merged = {
+        tuple(row[field] for field in business_key): dict(row) for row in retained
+    }
+    for row in incoming:
+        merged[tuple(row[field] for field in business_key)] = dict(row)
+    return [merged[key] for key in sorted(merged)]
+
+
 def _previous_summary(storage: PipelineStorage, batch_id: str) -> PipelineSummary:
     value = storage.read_summary(batch_id)
     return PipelineSummary(
@@ -498,70 +530,31 @@ def process_batch(
                 )
             )
 
-    reconciliation: dict[str, Any] = {"batch_id": batch_id, "datasets": {}}
+    expected_silver: dict[str, list[dict[str, str]]] = {}
+    expected_quarantine: dict[str, list[dict[str, str]]] = {}
     for dataset in project_config.ordered_datasets:
-        source_count = len(standardized[dataset])
-        trusted_count = len(valid[dataset])
-        quarantined_count = len(quarantine.get(dataset, []))
-        count_match = source_count == trusted_count + quarantined_count
-        reconciliation["datasets"][dataset] = {
-            "source_rows": source_count,
-            "trusted_rows": trusted_count,
-            "quarantined_rows": quarantined_count,
-            "row_count_matches": count_match,
-        }
-        quality_results.append(
-            QualityResult(
-                rule_name="SOURCE_TARGET_ROW_RECONCILIATION",
-                affected_dataset=dataset,
-                batch_id=batch_id,
-                failure_reason="" if count_match else "ROW_COUNT_MISMATCH",
-                failed_row_count=0
-                if count_match
-                else abs(source_count - trusted_count - quarantined_count),
-                affected_financial_amount_eur="",
-                execution_timestamp=timestamp,
-                validation_status="PASS" if count_match else "FAIL",
+        if dataset == "invoices":
+            expected_silver[dataset] = all_trusted_invoices
+        else:
+            expected_silver[dataset] = _merged_silver_rows(
+                storage_adapter.read_silver(dataset),
+                batch_id,
+                valid[dataset],
+                project_config.dataset_keys[dataset],
             )
-        )
-        if dataset in FACT_DATASETS:
-            source_convertible = _sum_eur(standardized[dataset])
-            accounted = _sum_eur(valid[dataset]) + _sum_eur(quarantine[dataset])
-            financial_match = source_convertible == accounted
-            reconciliation["datasets"][dataset].update(
-                {
-                    "convertible_source_eur": decimal_string(
-                        source_convertible, project_config.money_scale
-                    ),
-                    "trusted_eur": decimal_string(
-                        _sum_eur(valid[dataset]), project_config.money_scale
-                    ),
-                    "quarantined_convertible_eur": decimal_string(
-                        _sum_eur(quarantine[dataset]), project_config.money_scale
-                    ),
-                    "financial_total_matches": financial_match,
-                }
-            )
-            quality_results.append(
-                QualityResult(
-                    rule_name="SOURCE_TARGET_FINANCIAL_RECONCILIATION",
-                    affected_dataset=dataset,
-                    batch_id=batch_id,
-                    failure_reason="" if financial_match else "FINANCIAL_TOTAL_MISMATCH",
-                    failed_row_count=0 if financial_match else 1,
-                    affected_financial_amount_eur=(
-                        ""
-                        if financial_match
-                        else decimal_string(
-                            abs(source_convertible - accounted), project_config.money_scale
-                        )
-                    ),
-                    execution_timestamp=timestamp,
-                    validation_status="PASS" if financial_match else "FAIL",
+        prior_quarantine = storage_adapter.read_quarantine(dataset)
+        expected_quarantine[dataset] = [
+            row for row in prior_quarantine if row.get("_batch_id") != batch_id
+        ] + quarantine[dataset]
+        if dataset == "invoices":
+            expected_quarantine[dataset] = [
+                row
+                for row in expected_quarantine[dataset]
+                if not INVOICE_DEDUP_REASON_CODES.intersection(
+                    row.get("_reason_codes", "").split("|")
                 )
-            )
+            ] + all_dedup_quarantine
 
-    for dataset in project_config.ordered_datasets:
         if dataset == "invoices":
             storage_adapter.replace_all_silver(
                 dataset, all_trusted_invoices, project_config.dataset_keys[dataset]
@@ -577,6 +570,110 @@ def process_batch(
     storage_adapter.replace_dedup_quarantine(
         "invoices", all_dedup_quarantine, INVOICE_DEDUP_REASON_CODES
     )
+
+    reconciliation: dict[str, Any] = {"batch_id": batch_id, "datasets": {}}
+    committed_silver_by_dataset: dict[str, list[dict[str, str]]] = {}
+    committed_quarantine_by_dataset: dict[str, list[dict[str, str]]] = {}
+    for dataset in project_config.ordered_datasets:
+        committed_silver = storage_adapter.read_silver(dataset)
+        committed_quarantine = storage_adapter.read_quarantine(dataset)
+        committed_silver_by_dataset[dataset] = committed_silver
+        committed_quarantine_by_dataset[dataset] = committed_quarantine
+        batch_trusted = [row for row in committed_silver if row.get("_batch_id") == batch_id]
+        batch_quarantined = [
+            row for row in committed_quarantine if row.get("_batch_id") == batch_id
+        ]
+        source_count = len(standardized[dataset])
+        source_accounted = source_count == len(batch_trusted) + len(batch_quarantined)
+        current_keys_match = _business_keys(
+            batch_trusted, project_config.dataset_keys[dataset]
+        ) == _business_keys(valid[dataset], project_config.dataset_keys[dataset])
+        global_keys_match = (
+            len(committed_silver) == len(expected_silver[dataset])
+            and _business_keys(committed_silver, project_config.dataset_keys[dataset])
+            == _business_keys(expected_silver[dataset], project_config.dataset_keys[dataset])
+        )
+        quarantine_match = _quarantine_signatures(
+            committed_quarantine
+        ) == _quarantine_signatures(expected_quarantine[dataset])
+        row_match = (
+            source_accounted
+            and current_keys_match
+            and global_keys_match
+            and quarantine_match
+        )
+        reconciliation["datasets"][dataset] = {
+            "source_rows": source_count,
+            "committed_batch_trusted_rows": len(batch_trusted),
+            "committed_batch_quarantined_rows": len(batch_quarantined),
+            "source_rows_accounted": source_accounted,
+            "current_business_keys_match": current_keys_match,
+            "global_business_keys_match": global_keys_match,
+            "quarantine_evidence_matches": quarantine_match,
+            "row_count_matches": row_match,
+        }
+        quality_results.append(
+            QualityResult(
+                rule_name="SOURCE_TARGET_ROW_RECONCILIATION",
+                affected_dataset=dataset,
+                batch_id=batch_id,
+                failure_reason="" if row_match else "COMMITTED_READBACK_MISMATCH",
+                failed_row_count=0 if row_match else 1,
+                affected_financial_amount_eur="",
+                execution_timestamp=timestamp,
+                validation_status="PASS" if row_match else "FAIL",
+            )
+        )
+        if dataset in FACT_DATASETS:
+            source_convertible = _sum_eur(standardized[dataset])
+            committed_batch_total = _sum_eur(batch_trusted) + _sum_eur(batch_quarantined)
+            expected_global_total = _sum_eur(expected_silver[dataset]) + _sum_eur(
+                expected_quarantine[dataset]
+            )
+            committed_global_total = _sum_eur(committed_silver) + _sum_eur(
+                committed_quarantine
+            )
+            financial_match = (
+                source_convertible == committed_batch_total
+                and expected_global_total == committed_global_total
+            )
+            difference = abs(source_convertible - committed_batch_total) + abs(
+                expected_global_total - committed_global_total
+            )
+            reconciliation["datasets"][dataset].update(
+                {
+                    "convertible_source_eur": decimal_string(
+                        source_convertible, project_config.money_scale
+                    ),
+                    "committed_batch_trusted_eur": decimal_string(
+                        _sum_eur(batch_trusted), project_config.money_scale
+                    ),
+                    "committed_batch_quarantined_eur": decimal_string(
+                        _sum_eur(batch_quarantined), project_config.money_scale
+                    ),
+                    "committed_global_total_matches": (
+                        expected_global_total == committed_global_total
+                    ),
+                    "financial_total_matches": financial_match,
+                }
+            )
+            quality_results.append(
+                QualityResult(
+                    rule_name="SOURCE_TARGET_FINANCIAL_RECONCILIATION",
+                    affected_dataset=dataset,
+                    batch_id=batch_id,
+                    failure_reason="" if financial_match else "COMMITTED_FINANCIAL_MISMATCH",
+                    failed_row_count=0 if financial_match else 1,
+                    affected_financial_amount_eur=(
+                        ""
+                        if financial_match
+                        else decimal_string(difference, project_config.money_scale)
+                    ),
+                    execution_timestamp=timestamp,
+                    validation_status="PASS" if financial_match else "FAIL",
+                )
+            )
+
     storage_adapter.replace_batch_quality(batch_id, [result.as_row() for result in quality_results])
     storage_adapter.write_reconciliation(batch_id, reconciliation)
 
@@ -591,17 +688,33 @@ def process_batch(
         )
     )
     status: PipelineStatus = "quality_failed" if failed_rules else "success"
-    invoice_revenue = _sum_eur(valid["invoices"])
+    committed_batch_silver = {
+        dataset: [
+            row
+            for row in committed_silver_by_dataset[dataset]
+            if row.get("_batch_id") == batch_id
+        ]
+        for dataset in project_config.ordered_datasets
+    }
+    committed_batch_quarantine = {
+        dataset: [
+            row
+            for row in committed_quarantine_by_dataset[dataset]
+            if row.get("_batch_id") == batch_id
+        ]
+        for dataset in project_config.ordered_datasets
+    }
+    invoice_revenue = _sum_eur(committed_batch_silver["invoices"])
     summary = PipelineSummary(
         batch_id=batch_id,
         scenario=scenario,
         status=status,
         fingerprint=fingerprint,
         bronze_rows={dataset: len(rows) for dataset, rows in bronze.items()},
-        silver_rows={dataset: len(rows) for dataset, rows in valid.items()},
+        silver_rows={dataset: len(rows) for dataset, rows in committed_batch_silver.items()},
         quarantine_rows={
             dataset: len(rows)
-            for dataset, rows in quarantine.items()
+            for dataset, rows in committed_batch_quarantine.items()
             if dataset in FACT_DATASETS or rows
         },
         failed_rules=failed_rules,
