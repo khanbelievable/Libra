@@ -82,6 +82,7 @@ The domain layer works on typed row mappings and produces explicit valid rows, q
 
 - A quality failure is a controlled completed run with failed rule results and quarantined rows.
 - An unreadable schema, corrupt manifest, or storage failure is an execution failure.
-- Bronze is addressed by batch ID and payload fingerprint, so every received version remains replayable.
+- Bronze is addressed by batch ID and a checked 80-bit SHA-256 prefix in a flat path, while the full fingerprint is retained in provenance, manifest, summary, and state. An identifier collision fails rather than overwriting evidence.
+- The local adapter is single-writer. Per-file replacement is atomic and processed state is written last; rerun is the crash-recovery mechanism.
 - Silver replacement is keyed by batch contribution before business-key merge, making corrected reprocessing safe.
 - Timestamps used in generated demo evidence come from deterministic batch metadata. A production adapter uses the orchestrator's UTC execution timestamp.

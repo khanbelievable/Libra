@@ -8,6 +8,8 @@ from collections.abc import Iterable, Sequence
 from pathlib import Path
 from typing import Any
 
+from datalibra.domain.contracts import fingerprint_storage_id
+
 
 def read_csv(path: Path) -> list[dict[str, str]]:
     with path.open(encoding="utf-8", newline="") as handle:
@@ -65,9 +67,19 @@ class LocalCsvStorage:
         fingerprint: str,
         rows: Sequence[dict[str, str]],
     ) -> None:
-        write_csv_atomic(
-            self.root / "bronze" / dataset / batch_id / f"{fingerprint}.csv",
-            rows,
+        path = self._bronze_path(dataset, batch_id, fingerprint)
+        if path.exists() and path.stat().st_size:
+            stored_fingerprints = {row.get("_source_fingerprint", "") for row in read_csv(path)}
+            if stored_fingerprints != {fingerprint}:
+                raise RuntimeError(
+                    "Bronze storage identifier collision for "
+                    f"{batch_id}/{fingerprint_storage_id(fingerprint)}"
+                )
+        write_csv_atomic(path, rows)
+
+    def _bronze_path(self, dataset: str, batch_id: str, fingerprint: str) -> Path:
+        return (
+            self.root / "bronze" / dataset / f"{batch_id}-{fingerprint_storage_id(fingerprint)}.csv"
         )
 
     def replace_batch_and_merge_silver(
@@ -119,7 +131,7 @@ class LocalCsvStorage:
         write_csv_atomic(path, combined, fields)
 
     def read_bronze(self, dataset: str, batch_id: str, fingerprint: str) -> list[dict[str, str]]:
-        return read_csv(self.root / "bronze" / dataset / batch_id / f"{fingerprint}.csv")
+        return read_csv(self._bronze_path(dataset, batch_id, fingerprint))
 
     def read_silver(self, dataset: str) -> list[dict[str, str]]:
         path = self.root / "silver" / f"{dataset}.csv"

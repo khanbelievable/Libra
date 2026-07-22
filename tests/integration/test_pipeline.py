@@ -44,12 +44,28 @@ def test_changed_payload_same_batch_replaces_prior_contribution(tmp_path: Path) 
     assert corrected.fingerprint != original.fingerprint
     assert corrected.trusted_invoice_revenue_eur == "916451.47"
     assert len(read_rows(output / "silver" / "invoices.csv")) == 720
-    bronze_versions = list((output / "bronze" / "invoices" / "slice001-healthy").glob("*.csv"))
+    bronze_versions = list((output / "bronze" / "invoices").glob("*.csv"))
     assert len(bronze_versions) == 2
     assert {path.stem for path in bronze_versions} == {
-        original.fingerprint,
-        corrected.fingerprint,
+        f"slice001-healthy-{original.fingerprint[:20]}",
+        f"slice001-healthy-{corrected.fingerprint[:20]}",
     }
+
+
+@pytest.mark.integration
+def test_deep_output_root_stays_below_practical_windows_path_limit(tmp_path: Path) -> None:
+    deep_root = tmp_path
+    while len(str(deep_root.resolve())) < 145:
+        deep_root /= "nested-output-segment"
+    batch = generate_scenario("healthy", tmp_path / "input")
+    output = deep_root / "processed"
+
+    summary = process_batch(batch, output)
+
+    assert summary.status == "success"
+    committed_paths = [path for path in output.rglob("*") if path.is_file()]
+    assert committed_paths
+    assert max(len(str(path.resolve())) + len(".tmp") for path in committed_paths) < 240
 
 
 @pytest.mark.integration

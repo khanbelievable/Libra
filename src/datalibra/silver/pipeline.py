@@ -69,7 +69,12 @@ def _validate_contract(dataset: str, path: Path, expected_rows: int) -> list[dic
 
 
 def _provenance(
-    row: dict[str, str], batch_id: str, dataset: str, number: int, timestamp: str
+    row: dict[str, str],
+    batch_id: str,
+    dataset: str,
+    number: int,
+    timestamp: str,
+    fingerprint: str,
 ) -> dict[str, str]:
     return {
         **row,
@@ -77,6 +82,7 @@ def _provenance(
         "_source_file": f"{dataset}.csv",
         "_source_row_number": f"{number:08d}",
         "_ingested_at": timestamp,
+        "_source_fingerprint": fingerprint,
     }
 
 
@@ -198,7 +204,7 @@ def process_batch(
         )
         raw[dataset] = rows
         bronze[dataset] = [
-            _provenance(row, batch_id, dataset, number, timestamp)
+            _provenance(row, batch_id, dataset, number, timestamp, fingerprint)
             for number, row in enumerate(rows, start=1)
         ]
         storage_adapter.write_bronze(dataset, batch_id, fingerprint, bronze[dataset])

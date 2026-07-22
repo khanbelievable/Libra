@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import hashlib
+import re
 from collections.abc import Iterable
 from pathlib import Path
 
@@ -63,6 +64,8 @@ IDENTIFIER_FIELDS = {
     "budgets": ("cost_center_id",),
 }
 
+STORAGE_ID_HEX_LENGTH = 20
+
 
 def source_fingerprint(paths: Iterable[Path]) -> str:
     """Return the canonical SHA-256 for a complete source delivery."""
@@ -74,3 +77,11 @@ def source_fingerprint(paths: Iterable[Path]) -> str:
         digest.update(path.name.encode())
         digest.update(path.read_bytes())
     return digest.hexdigest()
+
+
+def fingerprint_storage_id(fingerprint: str) -> str:
+    """Return an 80-bit path identifier while full SHA-256 stays in provenance."""
+
+    if not re.fullmatch(r"[0-9a-f]{64}", fingerprint):
+        raise ValueError("Source fingerprint must be a lowercase SHA-256 hex digest")
+    return fingerprint[:STORAGE_ID_HEX_LENGTH]
