@@ -118,6 +118,21 @@ class LocalCsvStorage:
         )
         write_csv_atomic(path, combined, fields)
 
+    def read_bronze(self, dataset: str, batch_id: str, fingerprint: str) -> list[dict[str, str]]:
+        return read_csv(self.root / "bronze" / dataset / batch_id / f"{fingerprint}.csv")
+
+    def read_silver(self, dataset: str) -> list[dict[str, str]]:
+        path = self.root / "silver" / f"{dataset}.csv"
+        return read_csv(path) if path.exists() and path.stat().st_size else []
+
+    def read_quarantine(self, dataset: str) -> list[dict[str, str]]:
+        path = self.root / "quarantine" / f"{dataset}.csv"
+        return read_csv(path) if path.exists() and path.stat().st_size else []
+
+    def read_quality(self) -> list[dict[str, str]]:
+        path = self.root / "quality" / "quality_results.csv"
+        return read_csv(path) if path.exists() and path.stat().st_size else []
+
     def read_state(self) -> dict[str, Any]:
         path = self.root / "state" / "processed_batches.json"
         if not path.exists():

@@ -5,16 +5,18 @@ from pathlib import Path
 
 import pytest
 
+from datalibra.domain.contracts import SOURCE_FIELDS
 from datalibra.generators import generate_scenario
-from datalibra.generators.synthetic import FIELDS
 from datalibra.silver import process_batch
+from datalibra.storage.base import PipelineStorage
+from datalibra.storage.local import LocalCsvStorage
 from tests.helpers import read_rows
 
 
 @pytest.mark.contract
 def test_source_headers_are_exact_and_complete(tmp_path: Path) -> None:
     batch = generate_scenario("healthy", tmp_path / "input")
-    for dataset, fields in FIELDS.items():
+    for dataset, fields in SOURCE_FIELDS.items():
         header = (batch / f"{dataset}.csv").read_text(encoding="utf-8").splitlines()[0]
         assert tuple(header.split(",")) == fields
 
@@ -51,3 +53,21 @@ def test_quality_result_contract_records_passes_and_failures(tmp_path: Path) -> 
     assert duplicate["failure_reason"] == "DUPLICATE_INVOICE"
     assert duplicate["failed_row_count"] == "12"
     assert any(row["validation_status"] == "PASS" for row in rows)
+
+
+@pytest.mark.contract
+def test_local_storage_satisfies_complete_runtime_protocol(tmp_path: Path) -> None:
+    storage = LocalCsvStorage(tmp_path)
+    assert isinstance(storage, PipelineStorage)
+
+
+@pytest.mark.contract
+def test_pipeline_accepts_injected_storage_adapter(tmp_path: Path) -> None:
+    batch = generate_scenario("healthy", tmp_path / "input")
+    storage = LocalCsvStorage(tmp_path / "custom-storage")
+
+    summary = process_batch(batch, tmp_path / "unused-default", storage=storage)
+
+    assert summary.status == "success"
+    assert len(storage.read_silver("invoices")) == 720
+    assert not (tmp_path / "unused-default").exists()

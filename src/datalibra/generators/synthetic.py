@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import csv
-import hashlib
 import json
 import random
 from collections.abc import Iterable
@@ -11,17 +10,9 @@ from datetime import date, timedelta
 from decimal import ROUND_HALF_UP, Decimal
 from pathlib import Path
 
+from datalibra.domain.contracts import DATASET_ORDER, SOURCE_FIELDS, source_fingerprint
+
 SCENARIOS = ("healthy", "duplicate_invoices", "missing_gbp_fx", "incomplete_germany")
-DATASET_ORDER = (
-    "countries",
-    "currencies",
-    "exchange_rates",
-    "customers",
-    "cost_centers",
-    "shipments",
-    "invoices",
-    "budgets",
-)
 
 COUNTRIES = (
     ("DE", "Germany", "EUR"),
@@ -31,35 +22,6 @@ COUNTRIES = (
     ("TR", "Türkiye", "TRY"),
 )
 CURRENCIES = (("EUR", "Euro", "2"), ("GBP", "Pound sterling", "2"), ("TRY", "Turkish lira", "2"))
-
-FIELDS = {
-    "countries": ("country_code", "country_name", "default_currency"),
-    "currencies": ("currency_code", "currency_name", "decimal_places"),
-    "exchange_rates": ("rate_date", "currency_code", "rate_to_eur"),
-    "customers": ("customer_id", "customer_name", "country_code"),
-    "cost_centers": ("cost_center_id", "cost_center_name", "country_code"),
-    "shipments": (
-        "shipment_id",
-        "shipment_date",
-        "country_code",
-        "customer_id",
-        "cost_center_id",
-        "currency_code",
-        "revenue_amount",
-    ),
-    "invoices": (
-        "invoice_id",
-        "shipment_id",
-        "invoice_date",
-        "country_code",
-        "customer_id",
-        "cost_center_id",
-        "currency_code",
-        "revenue_amount",
-        "source_updated_at",
-    ),
-    "budgets": ("month_start", "cost_center_id", "currency_code", "budget_amount"),
-}
 
 
 def _money(value: Decimal) -> str:
@@ -217,14 +179,6 @@ def _write_csv(path: Path, rows: Iterable[dict[str, str]], fields: tuple[str, ..
         writer.writerows(rows)
 
 
-def _fingerprint(paths: Iterable[Path]) -> str:
-    digest = hashlib.sha256()
-    for path in sorted(paths, key=lambda item: item.name):
-        digest.update(path.name.encode())
-        digest.update(path.read_bytes())
-    return digest.hexdigest()
-
-
 def generate_scenario(
     scenario: str,
     output_root: Path,
@@ -238,7 +192,7 @@ def generate_scenario(
     paths: list[Path] = []
     for name in DATASET_ORDER:
         path = batch_dir / f"{name}.csv"
-        _write_csv(path, datasets[name], FIELDS[name])
+        _write_csv(path, datasets[name], SOURCE_FIELDS[name])
         paths.append(path)
     manifest = {
         "batch_id": f"slice001-{scenario}",
@@ -248,7 +202,7 @@ def generate_scenario(
         "period_end": "2025-12-31",
         "generated_at": "2026-01-15T08:00:00Z",
         "datasets": {name: len(datasets[name]) for name in DATASET_ORDER},
-        "fingerprint": _fingerprint(paths),
+        "fingerprint": source_fingerprint(paths),
     }
     manifest_path = batch_dir / "manifest.json"
     manifest_path.write_text(

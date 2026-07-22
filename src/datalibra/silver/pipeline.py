@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import csv
-import hashlib
 import json
 import logging
 import re
@@ -14,6 +13,14 @@ from pathlib import Path
 from typing import Any
 
 from datalibra.config import ProjectConfig, load_project_config
+from datalibra.domain.contracts import (
+    DATE_FIELD,
+    FACT_DATASETS,
+    IDENTIFIER_FIELDS,
+    MONETARY_FIELD,
+    SOURCE_FIELDS,
+    source_fingerprint,
+)
 from datalibra.domain.models import PipelineStatus, PipelineSummary, QualityResult
 from datalibra.domain.normalization import (
     decimal_string,
@@ -23,23 +30,11 @@ from datalibra.domain.normalization import (
     normalize_identifier,
     parse_decimal,
 )
-from datalibra.generators.synthetic import FIELDS
 from datalibra.quality.rules import REASON_TO_RULE, RULE_DATASETS
+from datalibra.storage.base import PipelineStorage
 from datalibra.storage.local import LocalCsvStorage
 
 LOGGER = logging.getLogger(__name__)
-FACT_DATASETS = ("shipments", "invoices", "budgets")
-MONETARY_FIELD = {
-    "shipments": "revenue_amount",
-    "invoices": "revenue_amount",
-    "budgets": "budget_amount",
-}
-DATE_FIELD = {"shipments": "shipment_date", "invoices": "invoice_date", "budgets": "month_start"}
-IDENTIFIER_FIELDS = {
-    "shipments": ("shipment_id", "customer_id", "cost_center_id"),
-    "invoices": ("invoice_id", "shipment_id", "customer_id", "cost_center_id"),
-    "budgets": ("cost_center_id",),
-}
 
 
 def _load_manifest(batch_dir: Path) -> dict[str, Any]:
@@ -56,24 +51,14 @@ def _load_manifest(batch_dir: Path) -> dict[str, Any]:
     return manifest
 
 
-def _source_fingerprint(batch_dir: Path, datasets: Sequence[str]) -> str:
-    digest = hashlib.sha256()
-    paths = [batch_dir / f"{dataset}.csv" for dataset in datasets]
-    for path in sorted(paths, key=lambda item: item.name):
-        if not path.is_file():
-            raise FileNotFoundError(f"Missing source dataset: {path}")
-        digest.update(path.name.encode())
-        digest.update(path.read_bytes())
-    return digest.hexdigest()
-
-
 def _validate_contract(dataset: str, path: Path, expected_rows: int) -> list[dict[str, str]]:
     with path.open(encoding="utf-8", newline="") as handle:
         reader = csv.DictReader(handle)
         actual_fields = tuple(reader.fieldnames or ())
-        if actual_fields != FIELDS[dataset]:
+        if actual_fields != SOURCE_FIELDS[dataset]:
             raise ValueError(
-                f"Schema mismatch for {dataset}: expected {FIELDS[dataset]}, got {actual_fields}"
+                "Schema mismatch for "
+                f"{dataset}: expected {SOURCE_FIELDS[dataset]}, got {actual_fields}"
             )
         rows = [dict(row) for row in reader]
     if len(rows) != expected_rows:
@@ -159,7 +144,7 @@ def _quality_result(
     )
 
 
-def _previous_summary(storage: LocalCsvStorage, batch_id: str) -> PipelineSummary:
+def _previous_summary(storage: PipelineStorage, batch_id: str) -> PipelineSummary:
     value = storage.read_summary(batch_id)
     return PipelineSummary(
         batch_id=str(value["batch_id"]),
@@ -179,6 +164,7 @@ def process_batch(
     output_root: Path,
     *,
     config: ProjectConfig | None = None,
+    storage: PipelineStorage | None = None,
 ) -> PipelineSummary:
     """Process one deterministic source batch into local Bronze/Silver evidence."""
 
@@ -187,21 +173,22 @@ def process_batch(
     batch_id = str(manifest["batch_id"])
     scenario = str(manifest["scenario"])
     timestamp = str(manifest["generated_at"])
-    fingerprint = _source_fingerprint(batch_dir, project_config.ordered_datasets)
+    source_paths = [batch_dir / f"{dataset}.csv" for dataset in project_config.ordered_datasets]
+    fingerprint = source_fingerprint(source_paths)
     if fingerprint != manifest.get("fingerprint"):
         raise ValueError(
             "Source fingerprint does not match manifest; regenerate or correct the manifest"
         )
 
-    storage = LocalCsvStorage(output_root)
-    state = storage.read_state()
+    storage_adapter = storage or LocalCsvStorage(output_root)
+    state = storage_adapter.read_state()
     prior = state.get("batches", {}).get(batch_id)
     if prior and prior.get("fingerprint") == fingerprint:
         LOGGER.info(
             "Batch already processed; returning no-op",
             extra={"batch_id": batch_id, "scenario": scenario, "status": "already_processed"},
         )
-        return _previous_summary(storage, batch_id)
+        return _previous_summary(storage_adapter, batch_id)
 
     raw: dict[str, list[dict[str, str]]] = {}
     bronze: dict[str, list[dict[str, str]]] = {}
@@ -214,7 +201,7 @@ def process_batch(
             _provenance(row, batch_id, dataset, number, timestamp)
             for number, row in enumerate(rows, start=1)
         ]
-        storage.write_bronze(dataset, batch_id, fingerprint, bronze[dataset])
+        storage_adapter.write_bronze(dataset, batch_id, fingerprint, bronze[dataset])
 
     standardized: dict[str, list[dict[str, str]]] = {}
     for dataset in project_config.ordered_datasets:
@@ -415,16 +402,16 @@ def process_batch(
             )
 
     for dataset in project_config.ordered_datasets:
-        storage.replace_batch_and_merge_silver(
+        storage_adapter.replace_batch_and_merge_silver(
             dataset,
             batch_id,
             valid[dataset],
             project_config.dataset_keys[dataset],
         )
         if dataset in FACT_DATASETS:
-            storage.replace_batch_quarantine(dataset, batch_id, quarantine[dataset])
-    storage.replace_batch_quality(batch_id, [result.as_row() for result in quality_results])
-    storage.write_reconciliation(batch_id, reconciliation)
+            storage_adapter.replace_batch_quarantine(dataset, batch_id, quarantine[dataset])
+    storage_adapter.replace_batch_quality(batch_id, [result.as_row() for result in quality_results])
+    storage_adapter.write_reconciliation(batch_id, reconciliation)
 
     failed_rules = tuple(
         sorted(
@@ -449,7 +436,7 @@ def process_batch(
         failed_rules=failed_rules,
         trusted_invoice_revenue_eur=decimal_string(invoice_revenue, project_config.money_scale),
     )
-    storage.write_summary(batch_id, summary.as_dict())
+    storage_adapter.write_summary(batch_id, summary.as_dict())
     batches = state.setdefault("batches", {})
     batches[batch_id] = {
         "fingerprint": fingerprint,
@@ -459,7 +446,7 @@ def process_batch(
     }
     if status == "success":
         state["latest_successful_refresh_timestamp"] = timestamp
-    storage.write_state(state)
+    storage_adapter.write_state(state)
     LOGGER.info(
         "Batch processing completed",
         extra={"batch_id": batch_id, "scenario": scenario, "status": status},
