@@ -6,7 +6,6 @@ import csv
 import json
 import logging
 import re
-from collections import Counter
 from collections.abc import Sequence
 from decimal import Decimal
 from pathlib import Path
@@ -86,8 +85,9 @@ def _provenance(
     }
 
 
-def _standardize_dimension(dataset: str, row: dict[str, str]) -> dict[str, str]:
+def _standardize_dimension(dataset: str, row: dict[str, str]) -> tuple[dict[str, str], list[str]]:
     result = dict(row)
+    reasons: list[str] = []
     if "country_code" in result:
         result["country_code"] = normalize_country(result["country_code"])
     if "currency_code" in result:
@@ -98,15 +98,23 @@ def _standardize_dimension(dataset: str, row: dict[str, str]) -> dict[str, str]:
         if identifier in result:
             result[identifier] = normalize_identifier(result[identifier])
     if dataset == "exchange_rates":
-        result["rate_date"] = normalize_date(result["rate_date"])
-        result["rate_to_eur"] = decimal_string(
-            parse_decimal(result["rate_to_eur"]), Decimal("0.000001")
-        )
-    return result
+        try:
+            result["rate_date"] = normalize_date(result["rate_date"])
+            rate = parse_decimal(result["rate_to_eur"])
+            if rate <= 0:
+                raise ValueError("Exchange rate must be greater than zero")
+            result["rate_to_eur"] = decimal_string(rate, Decimal("0.000001"))
+        except ValueError:
+            reasons.append("INVALID_EXCHANGE_RATE")
+            result["rate_to_eur"] = ""
+    return result, reasons
 
 
-def _standardize_fact(dataset: str, row: dict[str, str], config: ProjectConfig) -> dict[str, str]:
+def _standardize_fact(
+    dataset: str, row: dict[str, str], config: ProjectConfig
+) -> tuple[dict[str, str], list[str]]:
     result = dict(row)
+    reasons: list[str] = []
     if "country_code" in result:
         result["country_code"] = normalize_country(result["country_code"])
     result["currency_code"] = normalize_code(result["currency_code"])
@@ -114,8 +122,15 @@ def _standardize_fact(dataset: str, row: dict[str, str], config: ProjectConfig) 
     for identifier in IDENTIFIER_FIELDS[dataset]:
         result[identifier] = normalize_identifier(result.get(identifier, ""))
     money_field = MONETARY_FIELD[dataset]
-    result[money_field] = decimal_string(parse_decimal(result[money_field]), config.money_scale)
-    return result
+    try:
+        amount = parse_decimal(result[money_field])
+        if amount < 0:
+            raise ValueError(f"{money_field} cannot be negative")
+        result[money_field] = decimal_string(amount, config.money_scale)
+    except ValueError:
+        reasons.append("INVALID_FINANCIAL_VALUE")
+        result[money_field] = ""
+    return result, reasons
 
 
 def _sum_eur(rows: Sequence[dict[str, str]]) -> Decimal:
@@ -210,45 +225,82 @@ def process_batch(
         storage_adapter.write_bronze(dataset, batch_id, fingerprint, bronze[dataset])
 
     standardized: dict[str, list[dict[str, str]]] = {}
+    reasons_by_dataset: dict[str, list[list[str]]] = {}
     for dataset in project_config.ordered_datasets:
-        if dataset in FACT_DATASETS:
-            standardized[dataset] = [
+        standardized[dataset] = []
+        reasons_by_dataset[dataset] = []
+        for number, row in enumerate(raw[dataset], start=1):
+            if dataset in FACT_DATASETS:
+                normalized, reasons = _standardize_fact(dataset, row, project_config)
+            else:
+                normalized, reasons = _standardize_dimension(dataset, row)
+            standardized[dataset].append(
                 {
-                    **_standardize_fact(dataset, row, project_config),
+                    **normalized,
                     "_batch_id": batch_id,
                     "_source_row_number": f"{number:08d}",
                 }
-                for number, row in enumerate(raw[dataset], start=1)
-            ]
-        else:
-            standardized[dataset] = [
-                {
-                    **_standardize_dimension(dataset, row),
-                    "_batch_id": batch_id,
-                    "_source_row_number": f"{number:08d}",
-                }
-                for number, row in enumerate(raw[dataset], start=1)
-            ]
+            )
+            reasons_by_dataset[dataset].append(reasons)
 
-    customer_ids = {row["customer_id"] for row in standardized["customers"]}
-    cost_center_ids = {row["cost_center_id"] for row in standardized["cost_centers"]}
+    country_codes = {row["country_code"] for row in standardized["countries"]}
+    currency_codes = {row["currency_code"] for row in standardized["currencies"]}
+    for index, row in enumerate(standardized["countries"]):
+        if row["default_currency"] not in currency_codes:
+            reasons_by_dataset["countries"][index].append("UNKNOWN_CURRENCY_CODE")
+    for dataset in ("customers", "cost_centers"):
+        for index, row in enumerate(standardized[dataset]):
+            if row["country_code"] not in country_codes:
+                reasons_by_dataset[dataset][index].append("UNKNOWN_COUNTRY_CODE")
+    for index, row in enumerate(standardized["exchange_rates"]):
+        if row["currency_code"] not in currency_codes:
+            reasons_by_dataset["exchange_rates"][index].append("UNKNOWN_CURRENCY_CODE")
+
+    customer_ids = {
+        row["customer_id"]
+        for row, reasons in zip(
+            standardized["customers"], reasons_by_dataset["customers"], strict=True
+        )
+        if not reasons
+    }
+    cost_center_ids = {
+        row["cost_center_id"]
+        for row, reasons in zip(
+            standardized["cost_centers"], reasons_by_dataset["cost_centers"], strict=True
+        )
+        if not reasons
+    }
     shipment_ids = {row["shipment_id"] for row in standardized["shipments"]}
+    invalid_rate_keys = {
+        (row["rate_date"], row["currency_code"])
+        for row, reasons in zip(
+            standardized["exchange_rates"],
+            reasons_by_dataset["exchange_rates"],
+            strict=True,
+        )
+        if "INVALID_EXCHANGE_RATE" in reasons
+    }
     rates = {
         (row["rate_date"], row["currency_code"]): parse_decimal(row["rate_to_eur"])
-        for row in standardized["exchange_rates"]
+        for row, reasons in zip(
+            standardized["exchange_rates"],
+            reasons_by_dataset["exchange_rates"],
+            strict=True,
+        )
+        if not reasons
     }
-    invoice_counts = Counter(row["country_code"] for row in standardized["invoices"])
-    expected_country_codes = {row["country_code"] for row in standardized["countries"]}
-    minimum = int(
+    invoice_ids_by_country: dict[str, set[str]] = {country: set() for country in country_codes}
+    for row in standardized["invoices"]:
+        if row["country_code"] in invoice_ids_by_country:
+            invoice_ids_by_country[row["country_code"]].add(row["invoice_id"])
+    minimum = (
         Decimal(project_config.expected_invoice_rows_per_country)
         * project_config.country_volume_minimum_ratio
     )
     dropped_countries = {
-        country for country in expected_country_codes if invoice_counts.get(country, 0) < minimum
-    }
-
-    reasons_by_dataset: dict[str, list[list[str]]] = {
-        dataset: [[] for _ in standardized[dataset]] for dataset in FACT_DATASETS
+        country
+        for country, invoice_ids in invoice_ids_by_country.items()
+        if Decimal(len(invoice_ids)) < minimum
     }
     seen_invoice_ids: set[str] = set()
     for dataset in FACT_DATASETS:
@@ -262,6 +314,10 @@ def process_batch(
                 reasons.append("UNKNOWN_CUSTOMER_ID")
             if row.get("cost_center_id") and row["cost_center_id"] not in cost_center_ids:
                 reasons.append("UNKNOWN_COST_CENTER_ID")
+            if "country_code" in row and row["country_code"] not in country_codes:
+                reasons.append("UNKNOWN_COUNTRY_CODE")
+            if row["currency_code"] not in currency_codes:
+                reasons.append("UNKNOWN_CURRENCY_CODE")
             if dataset == "invoices":
                 if row["invoice_id"] in seen_invoice_ids:
                     reasons.append("DUPLICATE_INVOICE")
@@ -271,8 +327,16 @@ def process_batch(
                     reasons.append("UNKNOWN_SHIPMENT_ID")
                 if row["country_code"] in dropped_countries:
                     reasons.append("COUNTRY_VOLUME_DROP")
-            rate = rates.get((row[DATE_FIELD[dataset]], row["currency_code"]))
-            if rate is None:
+            rate_key = (row[DATE_FIELD[dataset]], row["currency_code"])
+            rate = rates.get(rate_key)
+            if not row[MONETARY_FIELD[dataset]] or "UNKNOWN_CURRENCY_CODE" in reasons:
+                row["fx_rate_to_eur"] = ""
+                row["amount_eur"] = ""
+            elif rate_key in invalid_rate_keys:
+                reasons.append("INVALID_EXCHANGE_RATE_REFERENCE")
+                row["fx_rate_to_eur"] = ""
+                row["amount_eur"] = ""
+            elif rate is None:
                 reasons.append("MISSING_EXCHANGE_RATE")
                 row["fx_rate_to_eur"] = ""
                 row["amount_eur"] = ""
@@ -283,14 +347,11 @@ def process_batch(
                     project_config.money_scale,
                 )
 
-    valid: dict[str, list[dict[str, str]]] = {
-        dataset: list(rows)
-        for dataset, rows in standardized.items()
-        if dataset not in FACT_DATASETS
-    }
-    quarantine: dict[str, list[dict[str, str]]] = {dataset: [] for dataset in FACT_DATASETS}
-    for dataset in FACT_DATASETS:
+    valid: dict[str, list[dict[str, str]]] = {}
+    quarantine: dict[str, list[dict[str, str]]] = {}
+    for dataset in project_config.ordered_datasets:
         valid[dataset] = []
+        quarantine[dataset] = []
         for row, reasons in zip(standardized[dataset], reasons_by_dataset[dataset], strict=True):
             if reasons:
                 quarantine[dataset].append({**row, "_reason_codes": "|".join(sorted(set(reasons)))})
@@ -414,8 +475,7 @@ def process_batch(
             valid[dataset],
             project_config.dataset_keys[dataset],
         )
-        if dataset in FACT_DATASETS:
-            storage_adapter.replace_batch_quarantine(dataset, batch_id, quarantine[dataset])
+        storage_adapter.replace_batch_quarantine(dataset, batch_id, quarantine[dataset])
     storage_adapter.replace_batch_quality(batch_id, [result.as_row() for result in quality_results])
     storage_adapter.write_reconciliation(batch_id, reconciliation)
 
@@ -438,7 +498,11 @@ def process_batch(
         fingerprint=fingerprint,
         bronze_rows={dataset: len(rows) for dataset, rows in bronze.items()},
         silver_rows={dataset: len(rows) for dataset, rows in valid.items()},
-        quarantine_rows={dataset: len(rows) for dataset, rows in quarantine.items()},
+        quarantine_rows={
+            dataset: len(rows)
+            for dataset, rows in quarantine.items()
+            if dataset in FACT_DATASETS or rows
+        },
         failed_rules=failed_rules,
         trusted_invoice_revenue_eur=decimal_string(invoice_revenue, project_config.money_scale),
     )

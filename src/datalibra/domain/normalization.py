@@ -64,10 +64,15 @@ def parse_decimal(value: str) -> Decimal:
     if raw.count(",") == 1 and "." not in raw:
         raw = raw.replace(",", ".")
     try:
-        return Decimal(raw)
+        parsed = Decimal(raw)
     except InvalidOperation as error:
         raise ValueError(f"Invalid decimal: {value!r}") from error
+    if not parsed.is_finite():
+        raise ValueError(f"Non-finite decimal: {value!r}")
+    return parsed
 
 
 def decimal_string(value: Decimal, scale: Decimal) -> str:
+    if not value.is_finite():
+        raise ValueError(f"Cannot persist non-finite decimal: {value!r}")
     return format(value.quantize(scale, rounding=ROUND_HALF_UP), "f")
