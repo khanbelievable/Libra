@@ -32,9 +32,7 @@ class FaultInjectingStorage(LocalCsvStorage):
         if self.fault == "drop_half":
             corrupted = corrupted[: len(corrupted) // 2]
         elif self.fault == "alter_amount":
-            corrupted[0]["amount_eur"] = str(
-                Decimal(corrupted[0]["amount_eur"]) + Decimal("1.00")
-            )
+            corrupted[0]["amount_eur"] = str(Decimal(corrupted[0]["amount_eur"]) + Decimal("1.00"))
         elif self.fault == "omit_batch":
             current_batch = corrupted[0]["_batch_id"]
             corrupted = [row for row in corrupted if row["_batch_id"] != current_batch]
@@ -67,8 +65,7 @@ def test_reconciliation_uses_committed_readback_and_blocks_refresh(
     quality = [
         row
         for row in read_rows(output / "quality" / "quality_results.csv")
-        if row["affected_dataset"] == "invoices"
-        and row["rule_name"].startswith("SOURCE_TARGET_")
+        if row["affected_dataset"] == "invoices" and row["rule_name"].startswith("SOURCE_TARGET_")
     ]
     state = json.loads((output / "state" / "processed_batches.json").read_text())
     assert summary.status == "quality_failed"
@@ -76,4 +73,3 @@ def test_reconciliation_uses_committed_readback_and_blocks_refresh(
     assert any(row["validation_status"] == "FAIL" for row in quality)
     assert state["batches"][summary.batch_id]["status"] == "quality_failed"
     assert state["latest_successful_refresh_timestamp"] is None
-

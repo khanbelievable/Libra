@@ -46,9 +46,7 @@ def test_exact_cross_batch_resend_preserves_original_ownership(tmp_path: Path) -
     assert repeated.status == "already_processed"
     assert len(silver) == 720
     assert len(replay_quarantine) == 720
-    assert {row["_reason_codes"] for row in replay_quarantine} == {
-        "CROSS_BATCH_DUPLICATE_INVOICE"
-    }
+    assert {row["_reason_codes"] for row in replay_quarantine} == {"CROSS_BATCH_DUPLICATE_INVOICE"}
 
 
 @pytest.mark.integration

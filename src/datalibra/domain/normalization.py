@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from datetime import date
 from decimal import ROUND_HALF_UP, Decimal, InvalidOperation
 
@@ -41,28 +42,21 @@ def normalize_identifier(value: str) -> str:
 
 
 def normalize_date(value: str) -> str:
-    """Accept the explicit source formats and persist ISO-8601 dates."""
+    """Accept the source contract's unambiguous ISO-8601 calendar date."""
 
     raw = value.strip()
-    for separator, order in (("-", "ymd"), ("/", "dmy"), (".", "dmy")):
-        parts = raw.split(separator)
-        if len(parts) != 3:
-            continue
-        try:
-            if order == "ymd":
-                parsed = date(int(parts[0]), int(parts[1]), int(parts[2]))
-            else:
-                parsed = date(int(parts[2]), int(parts[1]), int(parts[0]))
-        except ValueError:
-            continue
-        return parsed.isoformat()
-    raise ValueError(f"Unsupported or invalid date: {value!r}")
+    if not re.fullmatch(r"\d{4}-\d{2}-\d{2}", raw):
+        raise ValueError(f"Unsupported or invalid date: {value!r}")
+    try:
+        return date.fromisoformat(raw).isoformat()
+    except ValueError as error:
+        raise ValueError(f"Unsupported or invalid date: {value!r}") from error
 
 
 def parse_decimal(value: str) -> Decimal:
-    raw = value.strip().replace(" ", "")
-    if raw.count(",") == 1 and "." not in raw:
-        raw = raw.replace(",", ".")
+    raw = value.strip()
+    if "," in raw or " " in raw:
+        raise ValueError(f"Ambiguous decimal: {value!r}")
     try:
         parsed = Decimal(raw)
     except InvalidOperation as error:

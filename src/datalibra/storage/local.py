@@ -29,8 +29,18 @@ def _ordered_fields(rows: Sequence[dict[str, str]]) -> list[str]:
     return fields
 
 
+def _spreadsheet_safe(value: str) -> str:
+    if value.startswith(("=", "+", "-", "@", "\t", "\r")):
+        return "'" + value
+    return value
+
+
 def write_csv_atomic(
-    path: Path, rows: Sequence[dict[str, str]], fields: Sequence[str] | None = None
+    path: Path,
+    rows: Sequence[dict[str, str]],
+    fields: Sequence[str] | None = None,
+    *,
+    protect_spreadsheets: bool = False,
 ) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     target_fields = list(fields or _ordered_fields(rows))
@@ -41,7 +51,15 @@ def write_csv_atomic(
                 handle, fieldnames=target_fields, extrasaction="ignore", lineterminator="\n"
             )
             writer.writeheader()
-            writer.writerows(rows)
+            output_rows = (
+                [
+                    {field: _spreadsheet_safe(str(value)) for field, value in row.items()}
+                    for row in rows
+                ]
+                if protect_spreadsheets
+                else rows
+            )
+            writer.writerows(output_rows)
     temporary.replace(path)
 
 
@@ -99,7 +117,7 @@ class LocalCsvStorage:
             merged[tuple(row[field] for field in business_key)] = dict(row)
         ordered = [merged[key] for key in sorted(merged)]
         fields = _ordered_fields([*rows, *existing])
-        write_csv_atomic(path, ordered, fields)
+        write_csv_atomic(path, ordered, fields, protect_spreadsheets=True)
 
     def replace_all_silver(
         self,
@@ -108,7 +126,9 @@ class LocalCsvStorage:
         business_key: tuple[str, ...],
     ) -> None:
         ordered = sorted(rows, key=lambda row: tuple(row[field] for field in business_key))
-        write_csv_atomic(self.root / "silver" / f"{dataset}.csv", ordered)
+        write_csv_atomic(
+            self.root / "silver" / f"{dataset}.csv", ordered, protect_spreadsheets=True
+        )
 
     def replace_batch_quarantine(
         self, dataset: str, batch_id: str, rows: Sequence[dict[str, str]]
@@ -119,7 +139,7 @@ class LocalCsvStorage:
         combined = [*retained, *(dict(row) for row in rows)]
         combined.sort(key=lambda row: (row.get("_batch_id", ""), row.get("_source_row_number", "")))
         fields = _ordered_fields([*rows, *existing])
-        write_csv_atomic(path, combined, fields)
+        write_csv_atomic(path, combined, fields, protect_spreadsheets=True)
 
     def replace_batch_quality(self, batch_id: str, rows: Sequence[dict[str, str]]) -> None:
         path = self.root / "quality" / "quality_results.csv"
@@ -137,7 +157,7 @@ class LocalCsvStorage:
             "execution_timestamp",
             "validation_status",
         )
-        write_csv_atomic(path, combined, fields)
+        write_csv_atomic(path, combined, fields, protect_spreadsheets=True)
 
     def replace_batch_claims(
         self, dataset: str, batch_id: str, rows: Sequence[dict[str, str]]
@@ -152,7 +172,12 @@ class LocalCsvStorage:
                 row.get("_source_row_number", ""),
             )
         )
-        write_csv_atomic(path, combined, _ordered_fields([*rows, *existing]))
+        write_csv_atomic(
+            path,
+            combined,
+            _ordered_fields([*rows, *existing]),
+            protect_spreadsheets=True,
+        )
 
     def read_claims(self, dataset: str) -> list[dict[str, str]]:
         path = self.root / "claims" / f"{dataset}.csv"
@@ -178,7 +203,12 @@ class LocalCsvStorage:
                 row.get("_source_row_number", ""),
             )
         )
-        write_csv_atomic(path, combined, _ordered_fields([*rows, *existing]))
+        write_csv_atomic(
+            path,
+            combined,
+            _ordered_fields([*rows, *existing]),
+            protect_spreadsheets=True,
+        )
 
     def read_bronze(self, dataset: str, batch_id: str, fingerprint: str) -> list[dict[str, str]]:
         return read_csv(self._bronze_path(dataset, batch_id, fingerprint))

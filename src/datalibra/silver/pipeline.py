@@ -200,8 +200,7 @@ def _resolve_invoice_claims(
         payloads = {canonical_invoice_payload(row) for row in occurrences}
         if len(payloads) > 1:
             quarantined.extend(
-                {**row, "_reason_codes": "CONFLICTING_DUPLICATE_INVOICE"}
-                for row in occurrences
+                {**row, "_reason_codes": "CONFLICTING_DUPLICATE_INVOICE"} for row in occurrences
             )
             continue
 
@@ -241,9 +240,7 @@ def _merged_silver_rows(
     business_key: tuple[str, ...],
 ) -> list[dict[str, str]]:
     retained = [row for row in existing if row.get("_batch_id") != batch_id]
-    merged = {
-        tuple(row[field] for field in business_key): dict(row) for row in retained
-    }
+    merged = {tuple(row[field] for field in business_key): dict(row) for row in retained}
     for row in incoming:
         merged[tuple(row[field] for field in business_key)] = dict(row)
     return [merged[key] for key in sorted(merged)]
@@ -499,9 +496,7 @@ def process_batch(
     all_trusted_invoices, all_dedup_quarantine = _resolve_invoice_claims(
         active_claims, active_batch_order
     )
-    valid["invoices"] = [
-        row for row in all_trusted_invoices if row.get("_batch_id") == batch_id
-    ]
+    valid["invoices"] = [row for row in all_trusted_invoices if row.get("_batch_id") == batch_id]
     quarantine["invoices"].extend(
         row for row in all_dedup_quarantine if row.get("_batch_id") == batch_id
     )
@@ -611,19 +606,16 @@ def process_batch(
         current_keys_match = _business_keys(
             batch_trusted, project_config.dataset_keys[dataset]
         ) == _business_keys(valid[dataset], project_config.dataset_keys[dataset])
-        global_keys_match = (
-            len(committed_silver) == len(expected_silver[dataset])
-            and _business_keys(committed_silver, project_config.dataset_keys[dataset])
-            == _business_keys(expected_silver[dataset], project_config.dataset_keys[dataset])
+        global_keys_match = len(committed_silver) == len(
+            expected_silver[dataset]
+        ) and _business_keys(
+            committed_silver, project_config.dataset_keys[dataset]
+        ) == _business_keys(expected_silver[dataset], project_config.dataset_keys[dataset])
+        quarantine_match = _quarantine_signatures(committed_quarantine) == _quarantine_signatures(
+            expected_quarantine[dataset]
         )
-        quarantine_match = _quarantine_signatures(
-            committed_quarantine
-        ) == _quarantine_signatures(expected_quarantine[dataset])
         row_match = (
-            source_accounted
-            and current_keys_match
-            and global_keys_match
-            and quarantine_match
+            source_accounted and current_keys_match and global_keys_match and quarantine_match
         )
         reconciliation["datasets"][dataset] = {
             "source_rows": source_count,
@@ -653,9 +645,7 @@ def process_batch(
             expected_global_total = _sum_eur(expected_silver[dataset]) + _sum_eur(
                 expected_quarantine[dataset]
             )
-            committed_global_total = _sum_eur(committed_silver) + _sum_eur(
-                committed_quarantine
-            )
+            committed_global_total = _sum_eur(committed_silver) + _sum_eur(committed_quarantine)
             financial_match = (
                 source_convertible == committed_batch_total
                 and expected_global_total == committed_global_total
@@ -713,9 +703,7 @@ def process_batch(
     status: PipelineStatus = "quality_failed" if failed_rules else "success"
     committed_batch_silver = {
         dataset: [
-            row
-            for row in committed_silver_by_dataset[dataset]
-            if row.get("_batch_id") == batch_id
+            row for row in committed_silver_by_dataset[dataset] if row.get("_batch_id") == batch_id
         ]
         for dataset in project_config.ordered_datasets
     }

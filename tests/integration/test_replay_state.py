@@ -80,4 +80,3 @@ def test_state_is_committed_last_and_interrupted_run_is_replayable(tmp_path: Pat
     state = json.loads(state_path.read_text(encoding="utf-8"))
     assert recovered.status == "success"
     assert state["batches"][recovered.batch_id]["status"] == "success"
-
