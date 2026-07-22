@@ -12,8 +12,10 @@ from decimal import Decimal
 from pathlib import Path
 from typing import Any
 
+from datalibra import PIPELINE_VERSION
 from datalibra.config import ProjectConfig, load_project_config
 from datalibra.domain.contracts import (
+    DATA_CONTRACT_VERSION,
     DATE_FIELD,
     FACT_DATASETS,
     IDENTIFIER_FIELDS,
@@ -254,6 +256,9 @@ def _previous_summary(storage: PipelineStorage, batch_id: str) -> PipelineSummar
         scenario=str(value["scenario"]),
         status="already_processed",
         fingerprint=str(value["fingerprint"]),
+        pipeline_version=str(value["pipeline_version"]),
+        data_contract_version=str(value["data_contract_version"]),
+        quality_rules_version=str(value["quality_rules_version"]),
         bronze_rows={str(key): int(count) for key, count in value["bronze_rows"].items()},
         silver_rows={str(key): int(count) for key, count in value["silver_rows"].items()},
         quarantine_rows={str(key): int(count) for key, count in value["quarantine_rows"].items()},
@@ -286,12 +291,30 @@ def process_batch(
     storage_adapter = storage or LocalCsvStorage(output_root)
     state = storage_adapter.read_state()
     prior = state.get("batches", {}).get(batch_id)
-    if prior and prior.get("fingerprint") == fingerprint:
-        LOGGER.info(
-            "Batch already processed; returning no-op",
-            extra={"batch_id": batch_id, "scenario": scenario, "status": "already_processed"},
-        )
-        return _previous_summary(storage_adapter, batch_id)
+    replay_identity = {
+        "fingerprint": fingerprint,
+        "pipeline_version": PIPELINE_VERSION,
+        "data_contract_version": DATA_CONTRACT_VERSION,
+        "quality_rules_version": project_config.quality_rules_version,
+    }
+    if prior and all(prior.get(key) == value for key, value in replay_identity.items()):
+        try:
+            previous = _previous_summary(storage_adapter, batch_id)
+        except (FileNotFoundError, KeyError, TypeError, ValueError):
+            LOGGER.warning(
+                "Processed state has no compatible run summary; rebuilding batch",
+                extra={"batch_id": batch_id, "scenario": scenario},
+            )
+        else:
+            LOGGER.info(
+                "Batch already processed; returning no-op",
+                extra={
+                    "batch_id": batch_id,
+                    "scenario": scenario,
+                    "status": "already_processed",
+                },
+            )
+            return previous
 
     raw: dict[str, list[dict[str, str]]] = {}
     bronze: dict[str, list[dict[str, str]]] = {}
@@ -710,6 +733,9 @@ def process_batch(
         scenario=scenario,
         status=status,
         fingerprint=fingerprint,
+        pipeline_version=PIPELINE_VERSION,
+        data_contract_version=DATA_CONTRACT_VERSION,
+        quality_rules_version=project_config.quality_rules_version,
         bronze_rows={dataset: len(rows) for dataset, rows in bronze.items()},
         silver_rows={dataset: len(rows) for dataset, rows in committed_batch_silver.items()},
         quarantine_rows={
@@ -723,7 +749,7 @@ def process_batch(
     storage_adapter.write_summary(batch_id, summary.as_dict())
     batches = state.setdefault("batches", {})
     batches[batch_id] = {
-        "fingerprint": fingerprint,
+        **replay_identity,
         "scenario": scenario,
         "status": status,
         "execution_timestamp": timestamp,

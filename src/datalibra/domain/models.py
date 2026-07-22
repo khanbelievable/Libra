@@ -30,6 +30,9 @@ class PipelineSummary:
     scenario: str
     status: PipelineStatus
     fingerprint: str
+    pipeline_version: str
+    data_contract_version: str
+    quality_rules_version: str
     bronze_rows: dict[str, int]
     silver_rows: dict[str, int]
     quarantine_rows: dict[str, int]

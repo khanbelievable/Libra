@@ -18,6 +18,8 @@ DATASET_ORDER = (
     "budgets",
 )
 
+DATA_CONTRACT_VERSION = "1.1"
+
 SOURCE_FIELDS = {
     "countries": ("country_code", "country_name", "default_currency"),
     "currencies": ("currency_code", "currency_name", "decimal_places"),

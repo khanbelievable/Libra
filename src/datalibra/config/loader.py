@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 from dataclasses import dataclass
 from decimal import Decimal
@@ -22,12 +23,18 @@ class ProjectConfig:
     dataset_keys: dict[str, tuple[str, ...]]
     ordered_datasets: tuple[str, ...]
     critical_rules: frozenset[str]
+    quality_rules_version: str
 
 
 def _read_json(path: Path) -> dict[str, Any]:
     with path.open(encoding="utf-8") as handle:
         value: dict[str, Any] = json.load(handle)
     return value
+
+
+def _canonical_version(value: dict[str, Any]) -> str:
+    payload = json.dumps(value, sort_keys=True, separators=(",", ":")).encode()
+    return hashlib.sha256(payload).hexdigest()
 
 
 def discover_repository_root(start: Path | None = None) -> Path:
@@ -57,4 +64,5 @@ def load_project_config(repository_root: Path | None = None) -> ProjectConfig:
         dataset_keys=keys,
         ordered_datasets=tuple(datasets["ordered_datasets"]),
         critical_rules=frozenset(quality["critical_rules"]),
+        quality_rules_version=_canonical_version(quality),
     )
