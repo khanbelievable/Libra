@@ -10,6 +10,34 @@ Every finding below was either reproduced by executing code against generated ba
 (probe scripts run during this review) or verified by direct source inspection. Findings
 are ordered by severity. Line numbers refer to the reviewed commit.
 
+## Slice 001.1 remediation status
+
+Status recorded on 2026-07-22. Test paths refer to the remediated tree; original evidence and
+line references below remain unchanged as the independent review record.
+
+| Finding | Status | Remediation evidence |
+|---|---|---|
+| LIB-R-001 | **CLOSED** | FX must be finite and greater than zero; dependent facts are quarantined (`test_trust_validation.py`). No unowned plausibility band was invented. |
+| LIB-R-002 | **CLOSED** | Active-batch invoice claims prevent cross-batch inflation, withhold conflicts, and scope corrections to their owner (`test_cross_batch_dedup.py`). |
+| LIB-R-003 | **CLOSED** | Reconciliation reads committed Silver/quarantine through the storage contract; three corrupt-write adapters are detected (`test_committed_reconciliation.py`). |
+| LIB-R-004 | **CLOSED** | Non-finite and malformed financial values are rejected before conversion; summaries cannot persist non-finite totals (`test_trust_validation.py`, `test_normalization.py`). |
+| LIB-R-005 | **CLOSED** | Exact duplicate rates are deterministic; conflicting keys and their dependents are withheld (`test_fx_duplicates.py`). |
+| LIB-R-006 | **CLOSED** | Country, currency, customer, cost-center, and shipment references are enforced (`test_trust_validation.py`). |
+| LIB-R-007 | **CLOSED** | Replay identity includes pipeline, data-contract, and rules versions; incompatibility rebuilds (`test_replay_state.py`). |
+| LIB-R-008 | **CLOSED** | `PipelineStorage` declares every orchestration operation, is injectable, and shares neutral contracts; the full pipeline runs against an independent in-memory adapter (`test_in_memory_adapter.py`). |
+| LIB-R-009 | **CLOSED** | Source dates are strict ISO-8601 and decimals use a dot separator; ambiguous regional literals are rejected (`test_normalization.py`). |
+| LIB-R-010 | **CLOSED** | Bronze uses a checked 80-bit identifier in a flat path; the full digest remains in provenance (`test_pipeline.py`, `test_contracts.py`). |
+| LIB-R-011 | **CLOSED** | Volume uses distinct invoice IDs and an exact Decimal threshold (`pipeline.py`). |
+| LIB-R-012 | **ACCEPTED POLICY** | Evidence grain is intentionally per batch for auditability; distinct-issue KPIs must count distinct business keys. |
+| LIB-R-013 | **CLOSED** | Missing run summary causes a logged rebuild, not a false no-op or raw failure (`test_replay_state.py`). |
+| LIB-R-014 | **CLOSED** | Steward-facing CSV publications prefix formula-leading values while Bronze preserves source evidence (`test_csv_safety.py`). |
+| LIB-R-015 | **CLOSED** | Runtime defaults ship in the wheel; CI installs and runs it outside the checkout (`test_config.py`, `ci.yml`). |
+| LIB-R-016 | **ACCEPTED POLICY** | Valid rows publish from a quality-failed batch, but the trusted refresh watermark does not advance; the consumption gate is now documented. |
+| LIB-R-017 | **CLOSED** | Per-transaction `ROUND_HALF_UP` policy is documented and boundary-tested. |
+| LIB-R-018 | **CLOSED** | Adversarial validation, reference, dedup, corruption, replay, packaging, and CSV-safety paths now have direct tests. |
+| LIB-R-019 | **CLOSED (DOCS)** | The local adapter is explicitly single-writer; the future Delta contract requires serializable publication. |
+| LIB-R-020 | **CLOSED** | `AGENTS.md`, historical/remediation handoffs, review links, and workflow references exist. |
+
 ---
 
 ## LIB-R-001 — No sanity rule on exchange-rate values; zero or negative rates silently corrupt trusted revenue
