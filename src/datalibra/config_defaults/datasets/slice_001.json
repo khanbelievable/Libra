@@ -1,0 +1,22 @@
+{
+  "datasets": {
+    "countries": {"business_key": ["country_code"]},
+    "currencies": {"business_key": ["currency_code"]},
+    "exchange_rates": {"business_key": ["rate_date", "currency_code"]},
+    "customers": {"business_key": ["customer_id"]},
+    "cost_centers": {"business_key": ["cost_center_id"]},
+    "shipments": {"business_key": ["shipment_id"]},
+    "invoices": {"business_key": ["invoice_id"]},
+    "budgets": {"business_key": ["month_start", "cost_center_id"]}
+  },
+  "ordered_datasets": [
+    "countries",
+    "currencies",
+    "exchange_rates",
+    "customers",
+    "cost_centers",
+    "shipments",
+    "invoices",
+    "budgets"
+  ]
+}

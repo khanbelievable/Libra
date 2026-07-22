@@ -6,6 +6,7 @@ import hashlib
 import json
 from dataclasses import dataclass
 from decimal import Decimal
+from importlib.resources import files
 from pathlib import Path
 from typing import Any
 
@@ -42,15 +43,28 @@ def discover_repository_root(start: Path | None = None) -> Path:
 
     current = (start or Path.cwd()).resolve()
     for candidate in (current, *current.parents):
-        if (candidate / "pyproject.toml").is_file():
+        if (
+            (candidate / "pyproject.toml").is_file()
+            and (candidate / "config" / "datasets" / "slice_001.json").is_file()
+            and (candidate / "config" / "quality-rules" / "slice_001.json").is_file()
+        ):
             return candidate
     raise FileNotFoundError("Could not find pyproject.toml from the current directory")
 
 
 def load_project_config(repository_root: Path | None = None) -> ProjectConfig:
-    root = (repository_root or discover_repository_root()).resolve()
-    datasets = _read_json(root / "config" / "datasets" / "slice_001.json")
-    quality = _read_json(root / "config" / "quality-rules" / "slice_001.json")
+    if repository_root is not None:
+        root = repository_root.resolve()
+        config_root = root / "config"
+    else:
+        try:
+            root = discover_repository_root()
+            config_root = root / "config"
+        except FileNotFoundError:
+            config_root = Path(str(files("datalibra.config_defaults")))
+            root = config_root
+    datasets = _read_json(config_root / "datasets" / "slice_001.json")
+    quality = _read_json(config_root / "quality-rules" / "slice_001.json")
     keys = {
         name: tuple(definition["business_key"]) for name, definition in datasets["datasets"].items()
     }
