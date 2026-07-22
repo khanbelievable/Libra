@@ -7,6 +7,9 @@ REASON_TO_RULE = {
     "INVALID_FINANCIAL_VALUE": "FINITE_FINANCIAL_VALUES",
     "INVALID_EXCHANGE_RATE": "VALID_EXCHANGE_RATES",
     "INVALID_EXCHANGE_RATE_REFERENCE": "VALID_EXCHANGE_RATES",
+    "DUPLICATE_EXCHANGE_RATE": "EXCHANGE_RATE_UNIQUENESS",
+    "CONFLICTING_EXCHANGE_RATE": "EXCHANGE_RATE_UNIQUENESS",
+    "CONFLICTING_EXCHANGE_RATE_REFERENCE": "EXCHANGE_RATE_UNIQUENESS",
     "MISSING_EXCHANGE_RATE": "EXCHANGE_RATE_EXISTS",
     "COUNTRY_VOLUME_DROP": "INVOICE_COUNTRY_VOLUME",
     "UNKNOWN_COUNTRY_CODE": "REFERENTIAL_INTEGRITY",
@@ -21,6 +24,12 @@ RULE_DATASETS = {
     "REQUIRED_IDENTIFIERS": ("shipments", "invoices", "budgets"),
     "FINITE_FINANCIAL_VALUES": ("shipments", "invoices", "budgets"),
     "VALID_EXCHANGE_RATES": ("exchange_rates", "shipments", "invoices", "budgets"),
+    "EXCHANGE_RATE_UNIQUENESS": (
+        "exchange_rates",
+        "shipments",
+        "invoices",
+        "budgets",
+    ),
     "EXCHANGE_RATE_EXISTS": ("shipments", "invoices", "budgets"),
     "INVOICE_COUNTRY_VOLUME": ("invoices",),
     "REFERENTIAL_INTEGRITY": (

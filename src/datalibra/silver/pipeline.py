@@ -256,6 +256,30 @@ def process_batch(
         if row["currency_code"] not in currency_codes:
             reasons_by_dataset["exchange_rates"][index].append("UNKNOWN_CURRENCY_CODE")
 
+    rate_indices_by_key: dict[tuple[str, str], list[int]] = {}
+    for index, row in enumerate(standardized["exchange_rates"]):
+        key = (row["rate_date"], row["currency_code"])
+        rate_indices_by_key.setdefault(key, []).append(index)
+    conflicting_rate_keys: set[tuple[str, str]] = set()
+    for key, indices in rate_indices_by_key.items():
+        if len(indices) < 2:
+            continue
+        rates_for_key = {
+            standardized["exchange_rates"][index]["rate_to_eur"]
+            for index in indices
+            if not reasons_by_dataset["exchange_rates"][index]
+        }
+        has_invalid_occurrence = any(
+            reasons_by_dataset["exchange_rates"][index] for index in indices
+        )
+        if has_invalid_occurrence or len(rates_for_key) != 1:
+            conflicting_rate_keys.add(key)
+            for index in indices:
+                reasons_by_dataset["exchange_rates"][index].append("CONFLICTING_EXCHANGE_RATE")
+        else:
+            for index in indices[1:]:
+                reasons_by_dataset["exchange_rates"][index].append("DUPLICATE_EXCHANGE_RATE")
+
     customer_ids = {
         row["customer_id"]
         for row, reasons in zip(
@@ -330,6 +354,10 @@ def process_batch(
             rate_key = (row[DATE_FIELD[dataset]], row["currency_code"])
             rate = rates.get(rate_key)
             if not row[MONETARY_FIELD[dataset]] or "UNKNOWN_CURRENCY_CODE" in reasons:
+                row["fx_rate_to_eur"] = ""
+                row["amount_eur"] = ""
+            elif rate_key in conflicting_rate_keys:
+                reasons.append("CONFLICTING_EXCHANGE_RATE_REFERENCE")
                 row["fx_rate_to_eur"] = ""
                 row["amount_eur"] = ""
             elif rate_key in invalid_rate_keys:
