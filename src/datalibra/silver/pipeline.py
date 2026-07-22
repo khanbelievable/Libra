@@ -6,6 +6,7 @@ import csv
 import json
 import logging
 import re
+from collections import defaultdict
 from collections.abc import Sequence
 from decimal import Decimal
 from pathlib import Path
@@ -18,6 +19,7 @@ from datalibra.domain.contracts import (
     IDENTIFIER_FIELDS,
     MONETARY_FIELD,
     SOURCE_FIELDS,
+    canonical_invoice_payload,
     source_fingerprint,
 )
 from datalibra.domain.models import PipelineStatus, PipelineSummary, QualityResult
@@ -34,6 +36,14 @@ from datalibra.storage.base import PipelineStorage
 from datalibra.storage.local import LocalCsvStorage
 
 LOGGER = logging.getLogger(__name__)
+
+INVOICE_DEDUP_REASON_CODES = frozenset(
+    {
+        "DUPLICATE_INVOICE",
+        "CROSS_BATCH_DUPLICATE_INVOICE",
+        "CONFLICTING_DUPLICATE_INVOICE",
+    }
+)
 
 
 def _load_manifest(batch_dir: Path) -> dict[str, Any]:
@@ -163,6 +173,46 @@ def _quality_result(
         execution_timestamp=timestamp,
         validation_status="FAIL" if flagged else "PASS",
     )
+
+
+def _resolve_invoice_claims(
+    claims: Sequence[dict[str, str]], batch_order: Sequence[str]
+) -> tuple[list[dict[str, str]], list[dict[str, str]]]:
+    """Resolve active invoice claims without allowing last-write-wins ownership."""
+
+    rank = {batch_id: index for index, batch_id in enumerate(batch_order)}
+    by_invoice: dict[str, list[dict[str, str]]] = defaultdict(list)
+    for row in claims:
+        by_invoice[row["invoice_id"]].append(dict(row))
+
+    trusted: list[dict[str, str]] = []
+    quarantined: list[dict[str, str]] = []
+    for invoice_id in sorted(by_invoice):
+        occurrences = sorted(
+            by_invoice[invoice_id],
+            key=lambda row: (
+                rank[row["_batch_id"]],
+                row["_source_row_number"],
+            ),
+        )
+        payloads = {canonical_invoice_payload(row) for row in occurrences}
+        if len(payloads) > 1:
+            quarantined.extend(
+                {**row, "_reason_codes": "CONFLICTING_DUPLICATE_INVOICE"}
+                for row in occurrences
+            )
+            continue
+
+        owner = occurrences[0]
+        trusted.append(owner)
+        for row in occurrences[1:]:
+            reason = (
+                "DUPLICATE_INVOICE"
+                if row["_batch_id"] == owner["_batch_id"]
+                else "CROSS_BATCH_DUPLICATE_INVOICE"
+            )
+            quarantined.append({**row, "_reason_codes": reason})
+    return trusted, quarantined
 
 
 def _previous_summary(storage: PipelineStorage, batch_id: str) -> PipelineSummary:
@@ -326,7 +376,6 @@ def process_batch(
         for country, invoice_ids in invoice_ids_by_country.items()
         if Decimal(len(invoice_ids)) < minimum
     }
-    seen_invoice_ids: set[str] = set()
     for dataset in FACT_DATASETS:
         for index, row in enumerate(standardized[dataset]):
             reasons = reasons_by_dataset[dataset][index]
@@ -343,10 +392,6 @@ def process_batch(
             if row["currency_code"] not in currency_codes:
                 reasons.append("UNKNOWN_CURRENCY_CODE")
             if dataset == "invoices":
-                if row["invoice_id"] in seen_invoice_ids:
-                    reasons.append("DUPLICATE_INVOICE")
-                else:
-                    seen_invoice_ids.add(row["invoice_id"])
                 if row["shipment_id"] not in shipment_ids:
                     reasons.append("UNKNOWN_SHIPMENT_ID")
                 if row["country_code"] in dropped_countries:
@@ -385,6 +430,26 @@ def process_batch(
                 quarantine[dataset].append({**row, "_reason_codes": "|".join(sorted(set(reasons)))})
             else:
                 valid[dataset].append(row)
+
+    storage_adapter.replace_batch_claims("invoices", batch_id, valid["invoices"])
+    active_batch_order = list(state.get("batches", {}))
+    if batch_id not in active_batch_order:
+        active_batch_order.append(batch_id)
+    active_batches = set(active_batch_order)
+    active_claims = [
+        row
+        for row in storage_adapter.read_claims("invoices")
+        if row.get("_batch_id") in active_batches
+    ]
+    all_trusted_invoices, all_dedup_quarantine = _resolve_invoice_claims(
+        active_claims, active_batch_order
+    )
+    valid["invoices"] = [
+        row for row in all_trusted_invoices if row.get("_batch_id") == batch_id
+    ]
+    quarantine["invoices"].extend(
+        row for row in all_dedup_quarantine if row.get("_batch_id") == batch_id
+    )
 
     quality_results: list[QualityResult] = []
     for rule, datasets in RULE_DATASETS.items():
@@ -497,13 +562,21 @@ def process_batch(
             )
 
     for dataset in project_config.ordered_datasets:
-        storage_adapter.replace_batch_and_merge_silver(
-            dataset,
-            batch_id,
-            valid[dataset],
-            project_config.dataset_keys[dataset],
-        )
+        if dataset == "invoices":
+            storage_adapter.replace_all_silver(
+                dataset, all_trusted_invoices, project_config.dataset_keys[dataset]
+            )
+        else:
+            storage_adapter.replace_batch_and_merge_silver(
+                dataset,
+                batch_id,
+                valid[dataset],
+                project_config.dataset_keys[dataset],
+            )
         storage_adapter.replace_batch_quarantine(dataset, batch_id, quarantine[dataset])
+    storage_adapter.replace_dedup_quarantine(
+        "invoices", all_dedup_quarantine, INVOICE_DEDUP_REASON_CODES
+    )
     storage_adapter.replace_batch_quality(batch_id, [result.as_row() for result in quality_results])
     storage_adapter.write_reconciliation(batch_id, reconciliation)
 

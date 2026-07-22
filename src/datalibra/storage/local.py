@@ -101,6 +101,15 @@ class LocalCsvStorage:
         fields = _ordered_fields([*rows, *existing])
         write_csv_atomic(path, ordered, fields)
 
+    def replace_all_silver(
+        self,
+        dataset: str,
+        rows: Sequence[dict[str, str]],
+        business_key: tuple[str, ...],
+    ) -> None:
+        ordered = sorted(rows, key=lambda row: tuple(row[field] for field in business_key))
+        write_csv_atomic(self.root / "silver" / f"{dataset}.csv", ordered)
+
     def replace_batch_quarantine(
         self, dataset: str, batch_id: str, rows: Sequence[dict[str, str]]
     ) -> None:
@@ -129,6 +138,47 @@ class LocalCsvStorage:
             "validation_status",
         )
         write_csv_atomic(path, combined, fields)
+
+    def replace_batch_claims(
+        self, dataset: str, batch_id: str, rows: Sequence[dict[str, str]]
+    ) -> None:
+        path = self.root / "claims" / f"{dataset}.csv"
+        existing = read_csv(path) if path.exists() and path.stat().st_size else []
+        retained = [row for row in existing if row.get("_batch_id") != batch_id]
+        combined = [*retained, *(dict(row) for row in rows)]
+        combined.sort(
+            key=lambda row: (
+                row.get("_batch_id", ""),
+                row.get("_source_row_number", ""),
+            )
+        )
+        write_csv_atomic(path, combined, _ordered_fields([*rows, *existing]))
+
+    def read_claims(self, dataset: str) -> list[dict[str, str]]:
+        path = self.root / "claims" / f"{dataset}.csv"
+        return read_csv(path) if path.exists() and path.stat().st_size else []
+
+    def replace_dedup_quarantine(
+        self,
+        dataset: str,
+        rows: Sequence[dict[str, str]],
+        reason_codes: frozenset[str],
+    ) -> None:
+        path = self.root / "quarantine" / f"{dataset}.csv"
+        existing = read_csv(path) if path.exists() and path.stat().st_size else []
+        retained = [
+            row
+            for row in existing
+            if not reason_codes.intersection(row.get("_reason_codes", "").split("|"))
+        ]
+        combined = [*retained, *(dict(row) for row in rows)]
+        combined.sort(
+            key=lambda row: (
+                row.get("_batch_id", ""),
+                row.get("_source_row_number", ""),
+            )
+        )
+        write_csv_atomic(path, combined, _ordered_fields([*rows, *existing]))
 
     def read_bronze(self, dataset: str, batch_id: str, fingerprint: str) -> list[dict[str, str]]:
         return read_csv(self._bronze_path(dataset, batch_id, fingerprint))

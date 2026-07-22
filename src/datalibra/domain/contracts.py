@@ -64,6 +64,17 @@ IDENTIFIER_FIELDS = {
     "budgets": ("cost_center_id",),
 }
 
+INVOICE_CANONICAL_FIELDS = (
+    "invoice_id",
+    "shipment_id",
+    "invoice_date",
+    "country_code",
+    "customer_id",
+    "cost_center_id",
+    "currency_code",
+    "revenue_amount",
+)
+
 STORAGE_ID_HEX_LENGTH = 20
 
 
@@ -85,3 +96,9 @@ def fingerprint_storage_id(fingerprint: str) -> str:
     if not re.fullmatch(r"[0-9a-f]{64}", fingerprint):
         raise ValueError("Source fingerprint must be a lowercase SHA-256 hex digest")
     return fingerprint[:STORAGE_ID_HEX_LENGTH]
+
+
+def canonical_invoice_payload(row: dict[str, str]) -> tuple[str, ...]:
+    """Return business fields used to distinguish replay from conflict."""
+
+    return tuple(row[field] for field in INVOICE_CANONICAL_FIELDS)

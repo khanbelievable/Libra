@@ -30,11 +30,31 @@ class PipelineStorage(Protocol):
         business_key: tuple[str, ...],
     ) -> None: ...
 
+    def replace_all_silver(
+        self,
+        dataset: str,
+        rows: Sequence[dict[str, str]],
+        business_key: tuple[str, ...],
+    ) -> None: ...
+
     def replace_batch_quarantine(
         self, dataset: str, batch_id: str, rows: Sequence[dict[str, str]]
     ) -> None: ...
 
     def replace_batch_quality(self, batch_id: str, rows: Sequence[dict[str, str]]) -> None: ...
+
+    def replace_batch_claims(
+        self, dataset: str, batch_id: str, rows: Sequence[dict[str, str]]
+    ) -> None: ...
+
+    def read_claims(self, dataset: str) -> list[dict[str, str]]: ...
+
+    def replace_dedup_quarantine(
+        self,
+        dataset: str,
+        rows: Sequence[dict[str, str]],
+        reason_codes: frozenset[str],
+    ) -> None: ...
 
     def read_bronze(
         self, dataset: str, batch_id: str, fingerprint: str
