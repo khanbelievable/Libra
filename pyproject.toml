@@ -1,0 +1,68 @@
+[build-system]
+requires = ["setuptools>=75", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "datalibra"
+version = "0.1.0"
+description = "Northstar Logistics finance analytics data pipeline"
+readme = "README.md"
+requires-python = ">=3.12"
+license = "MIT"
+authors = [{name = "Kaan"}]
+keywords = ["data-engineering", "finance-analytics", "data-quality", "etl"]
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "Intended Audience :: Developers",
+  "Programming Language :: Python :: 3.12",
+  "Topic :: Database",
+]
+dependencies = []
+
+[project.urls]
+Repository = "https://github.com/khanbelievable/Libra"
+Documentation = "https://github.com/khanbelievable/Libra/tree/main/docs"
+Issues = "https://github.com/khanbelievable/Libra/issues"
+
+[project.optional-dependencies]
+dev = [
+  "mypy>=1.15,<2",
+  "pytest>=8.3,<9",
+  "pytest-cov>=6,<7",
+  "ruff>=0.11,<1",
+]
+
+[project.scripts]
+libra = "datalibra.cli:main"
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+addopts = "-ra --strict-markers --strict-config"
+testpaths = ["tests"]
+pythonpath = ["src"]
+markers = [
+  "contract: schema and adapter contract tests",
+  "demo: executable portfolio acceptance evidence",
+  "integration: tests crossing storage and domain boundaries",
+]
+
+[tool.ruff]
+target-version = "py312"
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM", "RUF"]
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+packages = ["datalibra"]
+
+[tool.coverage.run]
+source = ["datalibra"]
+branch = true

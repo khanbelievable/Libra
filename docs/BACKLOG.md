@@ -1,0 +1,69 @@
+# Backlog
+
+Status values: `DONE`, `IN PROGRESS`, `PLANNED`.
+
+## LIBRA-001 — Trusted EUR invoice slice
+
+- **Goal:** Generate 12 months of source data and process healthy/failure batches from Bronze to Silver with quarantine.
+- **Business value:** Demonstrates that management revenue cannot be inflated by resends, incomplete deliveries, or missing FX.
+- **Components affected:** generator, local ingestion/storage, domain transforms, quality, reconciliation, CLI, tests, docs.
+- **Acceptance criteria:** All Slice 001 criteria in `docs/ACCEPTANCE_CRITERIA.md`.
+- **Required tests:** unit normalization/FX/rules; integration pipeline/idempotency; schema contracts; four demo scenarios.
+- **Demo evidence:** generated manifests, Silver/quarantine files, quality CSV, reconciliation JSON, pytest output.
+- **Dependencies:** Python 3.12; no cloud credentials.
+- **Completion status:** DONE (Slice 001; evidence in `docs/SLICE_001_REVIEW.md`).
+
+## LIBRA-002 — Operational cost and route profitability
+
+- **Goal:** Add routes, fuel/labor/warehousing/transport costs, and route/customer profitability Gold aggregates.
+- **Business value:** Explains margin drivers beyond top-line revenue.
+- **Components affected:** generator, Silver, Gold, quality, data model, KPI tests.
+- **Acceptance criteria:** Cost transactions reconcile; route/customer gross profit is reproducible; invalid references are quarantined.
+- **Required tests:** cost allocation, negative/credit handling, route joins, aggregate reconciliation.
+- **Demo evidence:** route and customer profitability extracts.
+- **Dependencies:** LIBRA-001.
+- **Completion status:** PLANNED.
+
+## LIBRA-003 — Late arrival and correction lifecycle
+
+- **Goal:** Add late invoices and retroactive corrections with accounting-period impact evidence.
+- **Business value:** Proves safe recovery without duplicate revenue or silent historical drift.
+- **Components affected:** generator, merge/state, reconciliation, audit, runbook.
+- **Acceptance criteria:** Late record updates the intended month; correction replaces prior values; lineage identifies both versions.
+- **Required tests:** replay, changed fingerprint, period restatement, unchanged re-run.
+- **Demo evidence:** before/after monthly totals and correction audit.
+- **Dependencies:** LIBRA-001.
+- **Completion status:** PLANNED.
+
+## LIBRA-004 — Databricks/Delta production adapter
+
+- **Goal:** Implement Auto Loader/batch ingestion, Delta Bronze/Silver/Gold, expectations, and Asset Bundle deployment.
+- **Business value:** Demonstrates production-scale incremental processing and operations.
+- **Components affected:** Databricks notebooks/jobs/bundles, Spark adapter, CI contracts.
+- **Acceptance criteria:** Same fixtures match local contract; Delta merges are idempotent; deployment validates in a workspace.
+- **Required tests:** local Spark tests and cloud smoke/job tests.
+- **Demo evidence:** bundle validation, job run, Delta history.
+- **Dependencies:** LIBRA-001 through LIBRA-003.
+- **Completion status:** PLANNED.
+
+## LIBRA-005 — Snowflake governed serving layer
+
+- **Goal:** Deploy conformed finance star schema, marts, reconciliation tables, and least-privilege roles.
+- **Business value:** Provides stable, governed consumption contracts.
+- **Components affected:** migrations, tables, views, marts, security, load adapter.
+- **Acceptance criteria:** Incremental load reconciles; roles restrict access; marts meet semantic contract.
+- **Required tests:** SQL schema, grant, uniqueness, reconciliation, and query tests.
+- **Demo evidence:** migration log, grants, sample mart results.
+- **Dependencies:** LIBRA-002, LIBRA-004.
+- **Completion status:** PLANNED.
+
+## LIBRA-006 — Power BI semantic/report experience
+
+- **Goal:** Complete PBIP/TMDL relationships, DAX, seven report pages, drill-through, and visual QA.
+- **Business value:** Makes trusted finance results actionable for management and data stewards.
+- **Components affected:** semantic model, report, DAX, Power BI documentation.
+- **Acceptance criteria:** Measures match SQL controls; pages meet specs; freshness/DQ visible; drill-through works.
+- **Required tests:** relationship validation, DAX control totals, refresh test, visual checklist.
+- **Demo evidence:** PBIP source, screenshots, recorded measure reconciliation.
+- **Dependencies:** LIBRA-005.
+- **Completion status:** PLANNED.

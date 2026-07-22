@@ -1,0 +1,28 @@
+# Documentation
+
+## Product and architecture
+
+- [Project scope](PROJECT_SCOPE.md) — implemented slice, target state, and explicit non-goals.
+- [Architecture](ARCHITECTURE.md) — system context, data flow, serving model, and recovery path.
+- [Data model](DATA_MODEL.md) — current source/Silver grains and planned finance star schema.
+- [Platform responsibilities](adr/ADR-001-platform-responsibilities.md) — why Databricks, Snowflake, and Power BI have different jobs.
+
+## Finance and trust
+
+- [KPI definitions](KPI_DEFINITIONS.md) — business definition, calculation, grain, fields, and edge behavior.
+- [Data-quality rules](DATA_QUALITY_RULES.md) — stable reason codes, thresholds, quarantine, and refresh semantics.
+- [Security and governance](SECURITY_AND_GOVERNANCE.md) — secrets, roles, evidence, and ownership.
+
+## Delivery
+
+- [Acceptance criteria](ACCEPTANCE_CRITERIA.md) — executable definition of done.
+- [Demo scenario](DEMO_SCENARIO.md) — commands and interview walkthrough.
+- [Backlog](BACKLOG.md) — vertical slices, dependencies, tests, and evidence.
+- [Slice 001 engineering review](SLICE_001_REVIEW.md) — completed work, decisions, evidence, and open questions.
+
+## Architecture decision records
+
+- [ADR-001: Platform responsibilities](adr/ADR-001-platform-responsibilities.md)
+- [ADR-002: Medallion architecture](adr/ADR-002-medallion-architecture.md)
+- [ADR-003: Idempotent processing](adr/ADR-003-idempotent-processing.md)
+- [ADR-004: Local and cloud adapters](adr/ADR-004-local-and-cloud-adapters.md)

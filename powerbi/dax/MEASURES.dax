@@ -1,0 +1,29 @@
+// Approved semantic definitions. Add to a dedicated Measures table in Power BI Desktop.
+
+Total Revenue := COALESCE(SUM(FactInvoice[AmountEUR]), 0)
+
+Total Operational Cost := COALESCE(SUM(FactOperationalCost[AmountEUR]), 0)
+
+Gross Profit := [Total Revenue] - [Total Operational Cost]
+
+Gross Margin Percentage := DIVIDE([Gross Profit], [Total Revenue])
+
+Shipment Count := DISTINCTCOUNT(FactShipment[ShipmentId])
+
+Revenue per Shipment := DIVIDE([Total Revenue], [Shipment Count])
+
+Cost per Shipment := DIVIDE([Total Operational Cost], [Shipment Count])
+
+Budget Amount := COALESCE(SUM(FactBudget[AmountEUR]), 0)
+
+Actual Cost := [Total Operational Cost]
+
+Budget Variance Amount := IF(ISBLANK([Budget Amount]), BLANK(), [Budget Amount] - [Actual Cost])
+
+Budget Variance Percentage := DIVIDE([Budget Variance Amount], [Budget Amount])
+
+FX Impact := SUMX(FactInvoice, FactInvoice[AmountEUR] - FactInvoice[AmountAtComparisonRateEUR])
+
+Failed Quality Rows := CALCULATE(SUM(FactDataQualityResult[FailedRowCount]), FactDataQualityResult[ValidationStatus] = "FAIL")
+
+Latest Successful Refresh := MAX(FactDataQualityResult[LatestSuccessfulRefreshTimestamp])

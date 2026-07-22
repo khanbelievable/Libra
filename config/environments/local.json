@@ -1,0 +1,6 @@
+{
+  "environment": "local",
+  "storage_adapter": "csv",
+  "reporting_currency": "EUR",
+  "log_level": "INFO"
+}

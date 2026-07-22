@@ -1,0 +1,15 @@
+{
+  "contract_version": 1,
+  "job_name": "libra-slice-001-bronze-silver",
+  "parameters": ["environment", "batch_id", "landing_uri", "catalog", "schema"],
+  "required_tasks": [
+    "ingest_bronze",
+    "validate_and_publish_silver",
+    "publish_quality_and_reconciliation"
+  ],
+  "success_semantics": {
+    "execution_failure": "job failure",
+    "quality_failure": "completed task with failed rule records and quarantined rows"
+  },
+  "implementation_status": "approved interface; planned in LIBRA-004"
+}

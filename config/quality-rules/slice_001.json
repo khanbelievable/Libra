@@ -1,0 +1,16 @@
+{
+  "reporting_currency": "EUR",
+  "money_scale": "0.01",
+  "rate_scale": "0.000001",
+  "expected_invoice_rows_per_country": 144,
+  "country_volume_minimum_ratio": "0.50",
+  "critical_rules": [
+    "DUPLICATE_INVOICE",
+    "REQUIRED_IDENTIFIERS",
+    "EXCHANGE_RATE_EXISTS",
+    "INVOICE_COUNTRY_VOLUME",
+    "REFERENTIAL_INTEGRITY",
+    "SOURCE_TARGET_ROW_RECONCILIATION",
+    "SOURCE_TARGET_FINANCIAL_RECONCILIATION"
+  ]
+}
