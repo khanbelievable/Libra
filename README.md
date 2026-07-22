@@ -13,12 +13,14 @@ I built the first vertical slice around a fictional company, **Northstar Logisti
 ## What the current slice proves
 
 - Deterministic generation of a full year of shipments, invoices, budgets, reference data, and daily FX rates.
-- Batch-addressed Bronze history with immutable payload versions identified by SHA-256 fingerprints.
+- Batch-addressed Bronze history with full SHA-256 provenance and collision-checked short path IDs.
 - Standardized Silver data using ISO country/currency codes, ISO dates, normalized identifiers, and fixed-scale decimal values.
 - Exact-date EUR conversion with `Decimal`, never binary floating-point arithmetic.
-- Quarantine of duplicate invoices, missing identifiers, unknown references, missing exchange rates, and incomplete country deliveries.
-- Stored quality outcomes and source-to-target row and financial reconciliation.
-- Idempotent no-op replay for unchanged batches and safe replacement for corrected batches.
+- Quarantine of invalid financial/FX values, duplicate or conflicting invoices/rates, unknown
+  references, missing exchange rates, and incomplete country deliveries.
+- Cross-batch invoice ownership that prevents redelivery inflation and withholds every conflicting claim.
+- Post-publication reconciliation of committed counts, business keys, batch contributions, and EUR totals.
+- Version-aware no-op replay, owner-scoped corrections, and state-last crash recovery.
 - Unit, integration, contract, and end-to-end demo tests that run without cloud credentials.
 
 ## Architecture
@@ -31,7 +33,9 @@ flowchart LR
     Rules -->|trusted| Silver["Silver: conformed EUR records"]
     Rules -->|unsafe| Quarantine["Quarantine: row + reason codes"]
     Rules --> Quality["Quality results"]
-    Silver --> Reconciliation["Row and financial reconciliation"]
+    Silver --> Readback["Committed storage readback"]
+    Quarantine --> Readback
+    Readback --> Reconciliation["Keys, counts, ownership, and EUR totals"]
 
     Silver -. production adapter .-> Delta["Databricks / Delta Gold"]
     Delta -. governed load .-> Snowflake["Snowflake finance marts"]
@@ -63,9 +67,9 @@ Full evidence: [Slice 001 expected results](demo/expected-results/SLICE_001.md).
 |---|---|
 | One unit of source currency maps to a versioned `rate_to_eur` value | Makes conversion direction explicit and testable |
 | Invoice date selects the daily FX rate | Provides deterministic behavior pending a final finance policy decision |
-| First duplicate occurrence is trusted; later occurrences are quarantined | Prevents revenue inflation while retaining the original valid event |
+| Active batches retain invoice claims by owner | Exact redelivery cannot inflate revenue; conflicts withhold every occurrence until correction |
 | Under-volume country partitions are withheld as a unit | Row-level validity cannot prove that a partial delivery is complete |
-| Batch ID + payload fingerprint controls replay | Distinguishes an unchanged resend from a real correction |
+| Fingerprint + processing-contract versions control replay | Prevents newer code from blessing stale outputs |
 | Local CSV is an adapter, not the domain model | Keeps local verification fast and cloud implementation replaceable |
 
 The decisions are recorded individually under [docs/adr](docs/adr).
@@ -118,24 +122,30 @@ data/processed/healthy/
 ├── silver/          trusted standardized datasets
 ├── quarantine/      rejected rows with stable reason codes
 ├── quality/         PASS and FAIL rule results
-├── reconciliation/  source-to-target counts and EUR totals
+├── reconciliation/  committed keys, counts, ownership, and EUR totals
 ├── runs/            machine-readable batch summaries
-└── state/           processed fingerprints and refresh status
+├── claims/          batch-owned invoice claims used for global deduplication
+└── state/           versioned replay identity and trusted refresh status
 ```
 
-An unchanged rerun returns `already_processed`. If the same batch ID arrives with a new fingerprint, the new Bronze version is retained and that batch’s previous Silver/quarantine contribution is replaced before the business-key merge.
+An unchanged rerun returns `already_processed` only when its source fingerprint, pipeline,
+data-contract, rules fingerprint, and prior run summary are compatible. If the same batch ID
+arrives with a correction, its claims and outputs replace only that batch's contribution; unrelated
+owners remain intact.
 
 ## Verification
 
 ```bash
-python -m pytest -q --cov=datalibra --cov-report=term --cov-fail-under=90
+python -m pytest -q --cov=datalibra --cov-report=term --cov-branch --cov-fail-under=90
 python -m ruff check .
 python -m ruff format --check .
 python -m mypy src/datalibra
 python -m pip check
 ```
 
-Current local baseline: **25 tests passing** and **94% branch-aware coverage**. GitHub Actions repeats the full gate on Windows and Linux.
+Current Slice 001.1 baseline: **82 tests passing** and **96.91% branch-aware coverage**. GitHub
+Actions repeats the gate on Windows and Linux, then installs the built wheel and smoke-tests the
+CLI outside the checkout.
 
 ## Repository map
 
@@ -150,13 +160,16 @@ snowflake/            serving-schema and role contracts
 powerbi/              relationships, DAX measures, and report-page specifications
 ```
 
-Start with the [documentation index](docs/README.md), [data-quality rules](docs/DATA_QUALITY_RULES.md), and [Slice 001 engineering review](docs/SLICE_001_REVIEW.md).
+Start with the [documentation index](docs/README.md), [data-quality rules](docs/DATA_QUALITY_RULES.md),
+and [Slice 001.1 remediation handoff](docs/handoffs/CODEX_REMEDIATION_SLICE_001_1.md).
 
 ## Current boundary and roadmap
 
 The local Bronze-to-Silver slice is implemented. Routes, operational cost transactions, late-arriving invoice demonstrations, actual PySpark/Delta jobs, Snowflake migrations, and a Power BI PBIP project remain planned work. Their interfaces are documented so that future implementation has an explicit contract, but they are not presented as completed.
 
-The next vertical slice adds route and operational-cost data, then produces reconciled customer, route, and cost-center profitability.
+The next planned vertical slice adds route and operational-cost data, then produces reconciled
+customer, route, and cost-center profitability. It remains gated on independent Slice 001.1
+re-review.
 
 See the [backlog](docs/BACKLOG.md) for acceptance criteria and dependencies.
 

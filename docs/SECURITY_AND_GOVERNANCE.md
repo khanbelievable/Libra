@@ -1,5 +1,13 @@
 # Security and Governance
 
+## Local CSV handling
+
+Bronze preserves exact source bytes and should be treated as untrusted evidence. Silver,
+quarantine, claims, and quality CSV publications prefix cells beginning with spreadsheet formula
+characters (`=`, `+`, `-`, `@`, tab, or carriage return) so steward review does not execute source
+text as a formula. Consumers needing exact raw values use Bronze and must disable formula
+evaluation.
+
 Libra uses synthetic data only. Customer names and identifiers are fictional and deterministic. Generated datasets are not committed.
 
 ## Controls

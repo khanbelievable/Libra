@@ -1,6 +1,13 @@
 # ADR-004: Local and cloud adapters
 
 - **Status:** Accepted
-- **Decision:** Put finance rules in typed, deterministic domain functions and isolate persistence/orchestration adapters. CSV is the local adapter; PySpark/Delta and Snowflake are optional production adapters.
+- **Decision:** Put shared schemas and finance rules in neutral typed contracts and isolate
+  persistence behind one complete, runtime-checkable `PipelineStorage` protocol. CSV is the local
+  adapter; PySpark/Delta and Snowflake are optional future adapters.
 - **Context:** Contributors need full local tests without Java, cloud credentials, or warehouse access.
-- **Consequences:** Contract fixtures must produce equivalent results across adapters. Optional packages are lazy imports. Platform-specific optimizations may differ, but rule names, rounding, keys, and quarantine semantics may not.
+- **Consequences:** The protocol covers Bronze, Silver, claims, quarantine, quality, state,
+  summaries, reconciliation, and committed reads. `process_batch` accepts an injected adapter.
+  Contract fixtures must produce equivalent results across adapters. Platform-specific
+  optimizations may differ, but rule names, rounding, ownership, keys, and quarantine semantics
+  may not. Every adapter must support post-publication readback and state-last recovery or an
+  equivalent atomic transaction.

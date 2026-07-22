@@ -16,3 +16,4 @@ data/verification/
 spark-warehouse/
 .idea/
 .vscode/
+.claude/

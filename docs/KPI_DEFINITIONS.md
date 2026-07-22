@@ -1,5 +1,12 @@
 # KPI Definitions
 
+## Finance rounding policy
+
+`rate_to_eur` is EUR per one source-currency unit. Each transaction is multiplied by the
+effective invoice-date rate and quantized to two decimal places using `ROUND_HALF_UP`; reported
+totals sum those already-rounded transaction values. Every later platform implementation must
+match this order of operations.
+
 All reporting currency values are EUR. Unless noted, filters from Date, Country, Customer, Route, Cost Center, and Currency dimensions apply.
 
 | KPI | Business definition and calculation | Grain | Required source fields | Null/edge behavior |

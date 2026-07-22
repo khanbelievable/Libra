@@ -61,15 +61,18 @@ Snowflake does not repeat cleansing, FX conversion, or deduplication. It enforce
 ```mermaid
 flowchart TD
     Batch["Batch arrives"] --> Fingerprint["Compute deterministic fingerprint"]
-    Fingerprint --> Same{"Same batch ID and fingerprint?"}
+    Fingerprint --> Same{"Same fingerprint and processing versions?"}
     Same -->|yes| NoOp["No-op; preserve prior outputs"]
     Same -->|no| Bronze["Write batch-addressed Bronze"]
     Bronze --> Checks["Standardize and run rules"]
-    Checks --> Valid{"Row/partition trusted?"}
-    Valid -->|yes| Merge["Replace prior batch contribution; upsert business key"]
+    Checks --> Claims["Resolve active invoice claims"]
+    Claims --> Valid{"Row/partition trusted?"}
+    Valid -->|yes| Merge["Replace only this batch contribution"]
     Valid -->|no| Quarantine["Replace prior batch quarantine; store reasons"]
-    Merge --> Evidence["Write quality and reconciliation evidence"]
-    Quarantine --> Evidence
+    Merge --> Readback["Read committed Silver and quarantine"]
+    Quarantine --> Readback
+    Readback --> Evidence["Reconcile keys, counts, ownership, and EUR totals"]
+    Evidence --> State["Write processed state last"]
     Evidence --> Correct["Steward corrects source and resubmits same batch ID"]
     Correct --> Fingerprint
 ```
@@ -84,5 +87,14 @@ The domain layer works on typed row mappings and produces explicit valid rows, q
 - An unreadable schema, corrupt manifest, or storage failure is an execution failure.
 - Bronze is addressed by batch ID and a checked 80-bit SHA-256 prefix in a flat path, while the full fingerprint is retained in provenance, manifest, summary, and state. An identifier collision fails rather than overwriting evidence.
 - The local adapter is single-writer. Per-file replacement is atomic and processed state is written last; rerun is the crash-recovery mechanism.
-- Silver replacement is keyed by batch contribution before business-key merge, making corrected reprocessing safe.
+- Invoice ownership is resolved from active per-batch claims. Exact cross-batch replays keep the
+  earliest owner; conflicting canonical payloads withhold all claims until correction.
+- Committed-output reconciliation reads through `PipelineStorage`; it does not attest an
+  in-memory partition as though it were persisted data.
+- Replay identity combines source fingerprint, package pipeline version, data-contract version,
+  and deterministic quality-rules fingerprint. A mismatch rebuilds instead of returning a no-op.
+- Valid rows from a quality-failed batch publish, but the trusted refresh watermark does not
+  advance. Local direct consumers must honor state.
+- Steward-facing CSVs neutralize spreadsheet-formula prefixes. Bronze intentionally retains the
+  exact source payload as immutable evidence.
 - Timestamps used in generated demo evidence come from deterministic batch metadata. A production adapter uses the orchestrator's UTC execution timestamp.

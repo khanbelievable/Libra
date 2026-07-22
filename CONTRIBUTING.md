@@ -16,6 +16,7 @@ python -m pytest -q --cov=datalibra --cov-report=term --cov-fail-under=90
 python -m ruff check .
 python -m ruff format --check .
 python -m mypy src/datalibra
+python -m pip check
 ```
 
 ## Engineering rules
@@ -39,3 +40,4 @@ Generated data, credentials, local environments, and processing output must not 
 3. Run the complete local verification gate.
 4. Confirm the README commands still work from a clean environment.
 5. Record material design trade-offs in an ADR.
+6. For packaging changes, install the built wheel and run the CLI outside the checkout.

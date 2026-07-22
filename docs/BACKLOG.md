@@ -13,6 +13,22 @@ Status values: `DONE`, `IN PROGRESS`, `PLANNED`.
 - **Dependencies:** Python 3.12; no cloud credentials.
 - **Completion status:** DONE (Slice 001; evidence in `docs/SLICE_001_REVIEW.md`).
 
+## LIBRA-001.1 — Trust core remediation
+
+- **Goal:** Close the independent review's trust failures without expanding product scope.
+- **Business value:** Makes FX conversion, invoice ownership, replay state, and reconciliation
+  defensible under adversarial input and storage faults.
+- **Components affected:** contracts, local storage, validation, deduplication, reconciliation,
+  replay state, packaging, tests, and audit documentation.
+- **Acceptance criteria:** Slice 001 criteria plus the remediation additions in
+  `docs/ACCEPTANCE_CRITERIA.md`.
+- **Required tests:** financial/FX boundaries, reference integrity, cross-batch ownership,
+  committed-write corruption, version mismatch, interrupted replay, path length, and wheel smoke.
+- **Demo evidence:** full automated suite, four CLI scenarios, coverage report, and
+  `docs/handoffs/CODEX_REMEDIATION_SLICE_001_1.md`.
+- **Dependencies:** LIBRA-001 and independent review at `40ac981`.
+- **Completion status:** DONE; awaiting independent Claude re-review before Slice 002 starts.
+
 ## LIBRA-002 — Operational cost and route profitability
 
 - **Goal:** Add routes, fuel/labor/warehousing/transport costs, and route/customer profitability Gold aggregates.
@@ -21,8 +37,8 @@ Status values: `DONE`, `IN PROGRESS`, `PLANNED`.
 - **Acceptance criteria:** Cost transactions reconcile; route/customer gross profit is reproducible; invalid references are quarantined.
 - **Required tests:** cost allocation, negative/credit handling, route joins, aggregate reconciliation.
 - **Demo evidence:** route and customer profitability extracts.
-- **Dependencies:** LIBRA-001.
-- **Completion status:** PLANNED.
+- **Dependencies:** LIBRA-001.1 and reviewer approval to proceed.
+- **Completion status:** PLANNED (review gate not yet cleared).
 
 ## LIBRA-003 — Late arrival and correction lifecycle
 

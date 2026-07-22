@@ -1,5 +1,15 @@
 # Data Model
 
+## Source representation contract
+
+Source calendar dates use unambiguous ISO `YYYY-MM-DD`. Decimal values use a dot radix with no
+grouping characters and must be finite. Monetary fact values are non-negative in Slice 001.
+Regional slash/dot dates and comma/grouped decimals are rejected rather than guessed.
+
+EUR conversion is stored per transaction at two decimal places with `ROUND_HALF_UP`; aggregates
+sum the rounded transaction values. Exchange rates are stored to six decimal places and must be
+finite and greater than zero.
+
 ## Slice 001 source and Silver entities
 
 | Dataset | Grain | Business key | Important fields |

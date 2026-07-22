@@ -19,6 +19,9 @@
 - [Demo scenario](DEMO_SCENARIO.md) — commands and interview walkthrough.
 - [Backlog](BACKLOG.md) — vertical slices, dependencies, tests, and evidence.
 - [Slice 001 engineering review](SLICE_001_REVIEW.md) — completed work, decisions, evidence, and open questions.
+- [Independent Slice 001 review](REVIEW_LOG.md) — reproduced findings and remediation status.
+- [Slice 001.1 remediation handoff](handoffs/CODEX_REMEDIATION_SLICE_001_1.md) — commits,
+  verification, limitations, and re-review questions.
 
 ## Architecture decision records
 

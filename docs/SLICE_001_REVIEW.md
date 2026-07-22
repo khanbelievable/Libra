@@ -1,5 +1,10 @@
 # Slice 001 Engineering Review
 
+> Historical baseline: this implementer review describes commit `40ac981`. The independent
+> findings and Slice 001.1 disposition are in [`REVIEW_LOG.md`](REVIEW_LOG.md), and the current
+> release evidence is in
+> [`handoffs/CODEX_REMEDIATION_SLICE_001_1.md`](handoffs/CODEX_REMEDIATION_SLICE_001_1.md).
+
 ## Delivered
 
 - Deterministic 2025 data for five countries and three transaction currencies.
