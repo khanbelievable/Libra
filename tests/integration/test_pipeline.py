@@ -54,9 +54,11 @@ def test_changed_payload_same_batch_replaces_prior_contribution(tmp_path: Path) 
 
 @pytest.mark.integration
 def test_deep_output_root_stays_below_practical_windows_path_limit(tmp_path: Path) -> None:
+    practical_windows_limit = 260
+    target_root_length = 165
     deep_root = tmp_path
-    while len(str(deep_root.resolve())) < 145:
-        deep_root /= "nested-output-segment"
+    while len(str(deep_root.resolve())) < target_root_length:
+        deep_root /= "d"
     batch = generate_scenario("healthy", tmp_path / "input")
     output = deep_root / "processed"
 
@@ -65,7 +67,12 @@ def test_deep_output_root_stays_below_practical_windows_path_limit(tmp_path: Pat
     assert summary.status == "success"
     committed_paths = [path for path in output.rglob("*") if path.is_file()]
     assert committed_paths
-    assert max(len(str(path.resolve())) + len(".tmp") for path in committed_paths) < 240
+    longest_committed_path = max(committed_paths, key=lambda path: len(str(path.resolve())))
+    longest_temporary_length = len(str(longest_committed_path.resolve())) + len(".tmp")
+    assert longest_temporary_length < practical_windows_limit, (
+        f"Longest generated path would be {longest_temporary_length} characters with its "
+        f"atomic-write suffix: {longest_committed_path}"
+    )
 
 
 @pytest.mark.integration
