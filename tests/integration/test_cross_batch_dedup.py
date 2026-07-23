@@ -211,7 +211,9 @@ def test_different_applied_fx_rate_is_a_conflict_in_every_processing_order(
     original_invoices = read_rows(original / "invoices.csv")
     changed_invoices = read_rows(changed / "invoices.csv")
     target_index = next(
-        index for index, row in enumerate(original_invoices) if row["currency_code"] == "GBP"
+        index
+        for index, row in enumerate(original_invoices)
+        if row["currency_code"] == "GBP" and int(row["invoice_date"][-2:]) >= 15
     )
     target_id = original_invoices[target_index]["invoice_id"]
     for row in changed_invoices:

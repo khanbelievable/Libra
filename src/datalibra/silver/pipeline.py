@@ -27,6 +27,7 @@ from datalibra.domain.contracts import (
 from datalibra.domain.errors import (
     ArtifactIntegrityError,
     ClaimsIntegrityError,
+    CrossBatchCollisionError,
     StateIntegrityError,
 )
 from datalibra.domain.integrity import (
@@ -430,6 +431,47 @@ def _merged_silver_rows(
     return [merged[key] for key in sorted(merged)]
 
 
+def _normalized_record_payload(row: dict[str, str]) -> dict[str, str]:
+    return {
+        field: value
+        for field, value in row.items()
+        if field not in {"_batch_id", "_source_row_number", "_reason_codes"}
+    }
+
+
+def _protect_non_invoice_financial_ownership(
+    storage: PipelineStorage,
+    batch_id: str,
+    valid: dict[str, list[dict[str, str]]],
+    quarantine: dict[str, list[dict[str, str]]],
+    dataset_keys: dict[str, tuple[str, ...]],
+) -> None:
+    """Retain first owner for exact facts and reject unsupported conflicts."""
+
+    for dataset in ("shipments", "budgets"):
+        business_key = dataset_keys[dataset]
+        existing_by_key = {
+            tuple(row[field] for field in business_key): row
+            for row in storage.read_silver(dataset)
+            if row.get("_batch_id") != batch_id
+        }
+        retained_incoming: list[dict[str, str]] = []
+        for row in valid[dataset]:
+            key = tuple(row[field] for field in business_key)
+            existing = existing_by_key.get(key)
+            if existing is None:
+                retained_incoming.append(row)
+                continue
+            if _normalized_record_payload(existing) != _normalized_record_payload(row):
+                raise CrossBatchCollisionError(
+                    "CROSS_BATCH_FINANCIAL_COLLISION: conflicting "
+                    f"{dataset} business key {key!r} is already owned by batch "
+                    f"{existing.get('_batch_id')!r}. No trusted output or state was changed."
+                )
+            quarantine[dataset].append({**row, "_reason_codes": "CROSS_BATCH_DUPLICATE_RECORD"})
+        valid[dataset] = retained_incoming
+
+
 def _previous_summary(storage: PipelineStorage, batch_id: str) -> PipelineSummary:
     value = storage.read_summary(batch_id)
     return PipelineSummary(
@@ -705,6 +747,14 @@ def process_batch(
                 quarantine[dataset].append({**row, "_reason_codes": "|".join(sorted(set(reasons)))})
             else:
                 valid[dataset].append(row)
+
+    _protect_non_invoice_financial_ownership(
+        storage_adapter,
+        batch_id,
+        valid,
+        quarantine,
+        project_config.dataset_keys,
+    )
 
     current_claim_attestation = rows_attestation(
         valid["invoices"], business_key=INVOICE_BUSINESS_KEY
