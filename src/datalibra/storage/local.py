@@ -63,6 +63,16 @@ def write_csv_atomic(
     temporary.replace(path)
 
 
+def write_spreadsheet_csv_export(
+    path: Path,
+    rows: Sequence[dict[str, str]],
+    fields: Sequence[str] | None = None,
+) -> None:
+    """Write a presentation-only CSV with formula-leading cells neutralized."""
+
+    write_csv_atomic(path, rows, fields, protect_spreadsheets=True)
+
+
 def write_json_atomic(path: Path, value: Any) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     temporary = path.with_suffix(path.suffix + ".tmp")
@@ -117,7 +127,7 @@ class LocalCsvStorage:
             merged[tuple(row[field] for field in business_key)] = dict(row)
         ordered = [merged[key] for key in sorted(merged)]
         fields = _ordered_fields([*rows, *existing])
-        write_csv_atomic(path, ordered, fields, protect_spreadsheets=True)
+        write_csv_atomic(path, ordered, fields)
 
     def replace_all_silver(
         self,
@@ -126,9 +136,7 @@ class LocalCsvStorage:
         business_key: tuple[str, ...],
     ) -> None:
         ordered = sorted(rows, key=lambda row: tuple(row[field] for field in business_key))
-        write_csv_atomic(
-            self.root / "silver" / f"{dataset}.csv", ordered, protect_spreadsheets=True
-        )
+        write_csv_atomic(self.root / "silver" / f"{dataset}.csv", ordered)
 
     def replace_batch_quarantine(
         self, dataset: str, batch_id: str, rows: Sequence[dict[str, str]]
@@ -139,7 +147,7 @@ class LocalCsvStorage:
         combined = [*retained, *(dict(row) for row in rows)]
         combined.sort(key=lambda row: (row.get("_batch_id", ""), row.get("_source_row_number", "")))
         fields = _ordered_fields([*rows, *existing])
-        write_csv_atomic(path, combined, fields, protect_spreadsheets=True)
+        write_csv_atomic(path, combined, fields)
 
     def replace_batch_quality(self, batch_id: str, rows: Sequence[dict[str, str]]) -> None:
         path = self.root / "quality" / "quality_results.csv"
@@ -157,7 +165,7 @@ class LocalCsvStorage:
             "execution_timestamp",
             "validation_status",
         )
-        write_csv_atomic(path, combined, fields, protect_spreadsheets=True)
+        write_csv_atomic(path, combined, fields)
 
     def replace_batch_claim_manifest(
         self, dataset: str, batch_id: str, rows: Sequence[dict[str, str]]
@@ -205,12 +213,7 @@ class LocalCsvStorage:
                 row.get("_source_row_number", ""),
             )
         )
-        write_csv_atomic(
-            path,
-            combined,
-            _ordered_fields([*rows, *existing]),
-            protect_spreadsheets=True,
-        )
+        write_csv_atomic(path, combined, _ordered_fields([*rows, *existing]))
 
     def read_bronze(self, dataset: str, batch_id: str, fingerprint: str) -> list[dict[str, str]]:
         return read_csv(self._bronze_path(dataset, batch_id, fingerprint))
