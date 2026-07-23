@@ -18,9 +18,14 @@ I built the first vertical slice around a fictional company, **Northstar Logisti
 - Exact-date EUR conversion with `Decimal`, never binary floating-point arithmetic.
 - Quarantine of invalid financial/FX values, duplicate or conflicting invoices/rates, unknown
   references, missing exchange rates, and incomplete country deliveries.
-- Cross-batch invoice ownership that prevents redelivery inflation and withholds every conflicting claim.
-- Post-publication reconciliation of committed counts, business keys, batch contributions, and EUR totals.
-- Version-aware no-op replay, owner-scoped corrections, and state-last crash recovery.
+- Stable cross-batch invoice ownership ranked by persisted arrival sequence, with financial
+  fingerprints that include the applied FX rate and translated EUR amount.
+- Independently attested batch claim manifests, a rebuildable claims index, and post-publication
+  reconciliation of committed counts, business keys, batch contributions, and EUR totals.
+- Version-aware no-op replay that verifies every committed artifact, owner-scoped corrections,
+  and fault-tested state-last crash recovery.
+- Canonical internal CSV values with formula neutralization isolated to explicit spreadsheet
+  exports.
 - Unit, integration, contract, and end-to-end demo tests that run without cloud credentials.
 
 ## Architecture
@@ -30,7 +35,8 @@ flowchart LR
     Sources["Regional source batches"] --> Manifest["Manifest + SHA-256 fingerprint"]
     Manifest --> Bronze["Bronze: immutable source evidence"]
     Bronze --> Rules["Standardization, validation, FX conversion"]
-    Rules -->|trusted| Silver["Silver: conformed EUR records"]
+    Rules --> Claims["Attested batch claim manifests"]
+    Claims -->|verified ownership| Silver["Silver: conformed EUR records"]
     Rules -->|unsafe| Quarantine["Quarantine: row + reason codes"]
     Rules --> Quality["Quality results"]
     Silver --> Readback["Committed storage readback"]
@@ -67,7 +73,8 @@ Full evidence: [Slice 001 expected results](demo/expected-results/SLICE_001.md).
 |---|---|
 | One unit of source currency maps to a versioned `rate_to_eur` value | Makes conversion direction explicit and testable |
 | Invoice date selects the daily FX rate | Provides deterministic behavior pending a final finance policy decision |
-| Active batches retain invoice claims by owner | Exact redelivery cannot inflate revenue; conflicts withhold every occurrence until correction |
+| Immutable arrival sequence ranks batch-owned invoice claims | JSON ordering cannot change ownership; exact redelivery cannot inflate revenue |
+| State attests claim manifests and committed run artifacts | Missing or altered evidence cannot silently shrink trusted output or produce a false no-op |
 | Under-volume country partitions are withheld as a unit | Row-level validity cannot prove that a partial delivery is complete |
 | Fingerprint + processing-contract versions control replay | Prevents newer code from blessing stale outputs |
 | Local CSV is an adapter, not the domain model | Keeps local verification fast and cloud implementation replaceable |
@@ -124,14 +131,15 @@ data/processed/healthy/
 ├── quality/         PASS and FAIL rule results
 ├── reconciliation/  committed keys, counts, ownership, and EUR totals
 ├── runs/            machine-readable batch summaries
-├── claims/          batch-owned invoice claims used for global deduplication
-└── state/           versioned replay identity and trusted refresh status
+├── claims/          attested batch manifests plus a rebuildable aggregate index
+└── state/           arrival order, artifact attestations, replay identity, recovery status
 ```
 
-An unchanged rerun returns `already_processed` only when its source fingerprint, pipeline,
-data-contract, rules fingerprint, and prior run summary are compatible. If the same batch ID
-arrives with a correction, its claims and outputs replace only that batch's contribution; unrelated
-owners remain intact.
+An unchanged rerun returns `already_processed` only when its source fingerprint, processing
+versions, claim manifest/index, Silver, quarantine, quality, reconciliation, and summary
+attestations are compatible. Missing or altered reconstructible evidence is deterministically
+repaired; damage to another active batch fails closed. If the same batch ID arrives with a
+correction, its immutable arrival sequence is retained and only its contribution is replaced.
 
 ## Verification
 
@@ -143,9 +151,9 @@ python -m mypy src/datalibra
 python -m pip check
 ```
 
-Current Slice 001.1 baseline: **82 tests passing** and **96.91% branch-aware coverage**. GitHub
-Actions repeats the gate on Windows and Linux, then installs the built wheel and smoke-tests the
-CLI outside the checkout.
+Current Slice 001.2 baseline: **139 tests passing**. GitHub Actions repeats the branch-aware
+coverage gate on Windows and Linux, then installs the built wheel and smoke-tests the CLI outside
+the checkout.
 
 ## Repository map
 
@@ -161,15 +169,17 @@ powerbi/              relationships, DAX measures, and report-page specification
 ```
 
 Start with the [documentation index](docs/README.md), [data-quality rules](docs/DATA_QUALITY_RULES.md),
-and [Slice 001.1 remediation handoff](docs/handoffs/CODEX_REMEDIATION_SLICE_001_1.md).
+and [Slice 001.2 remediation plan](docs/handoffs/CODEX_REMEDIATION_PLAN_001_2.md). Final
+verification evidence is in the
+[Slice 001.2 remediation handoff](docs/handoffs/CODEX_REMEDIATION_SLICE_001_2.md).
 
 ## Current boundary and roadmap
 
 The local Bronze-to-Silver slice is implemented. Routes, operational cost transactions, late-arriving invoice demonstrations, actual PySpark/Delta jobs, Snowflake migrations, and a Power BI PBIP project remain planned work. Their interfaces are documented so that future implementation has an explicit contract, but they are not presented as completed.
 
 The next planned vertical slice adds route and operational-cost data, then produces reconciled
-customer, route, and cost-center profitability. It remains gated on independent Slice 001.1
-re-review.
+customer, route, and cost-center profitability. It remains gated on independent re-review of the
+Slice 001.2 fixes.
 
 See the [backlog](docs/BACKLOG.md) for acceptance criteria and dependencies.
 

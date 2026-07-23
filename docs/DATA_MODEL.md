@@ -37,6 +37,15 @@ Facts keep their natural event grain. Power BI relationships are single-directio
 
 Every Bronze/Silver/quarantine fact carries a batch ID and source row number. Natural identifiers are deterministic and source-aligned. Warehouse surrogate keys are a Snowflake serving concern and are not fabricated locally.
 
+Invoice business identity is `invoice_id`. Financial claim identity additionally includes the
+normalized shipment, invoice/translation date, country, customer, cost center, currency, source
+amount, applied FX rate, and translated EUR amount. CSV spelling and file position are not part of
+the fingerprint.
+
+Processed state stores immutable batch arrival sequence plus claim and committed-artifact
+attestations. Batch-owned claim manifests are trust-critical evidence; the aggregate claim CSV is
+a rebuildable index.
+
 ## Future entities
 
 Routes and operational costs enter Slice 002. Their planned grains are one route definition and one posted operational-cost transaction. Late-arrival metadata and correction lineage extend the existing batch fields rather than creating a second processing path.

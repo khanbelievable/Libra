@@ -26,6 +26,9 @@ python -m pip check
 - Keep source evidence immutable and keep invalid records out of Silver.
 - Add stable, human-readable reason codes for new quarantine behavior.
 - Preserve idempotency for unchanged and corrected batches.
+- Preserve immutable arrival order, batch-owned claim evidence, and state-last publication.
+- Keep internal CSV values canonical; formula-safe spreadsheet files are presentation exports,
+  not pipeline inputs.
 - Put business thresholds and dataset keys in version-controlled configuration.
 - Keep cloud SDK imports behind adapters so local tests need no credentials.
 - Update the relevant ADR, quality rule, KPI definition, or data model when behavior changes.

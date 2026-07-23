@@ -5,6 +5,7 @@
 | Duplicate invoice | `DUPLICATE_INVOICE` | invoices | Within one batch, keep the first identical claim and quarantine later occurrences | error |
 | Cross-batch invoice replay | `CROSS_BATCH_DUPLICATE_INVOICE` | invoices | Preserve the earliest active owner; quarantine the redelivery | error |
 | Conflicting invoice claim | `CONFLICTING_DUPLICATE_INVOICE` | invoices | Withhold every occurrence until an owning batch is corrected | error |
+| Cross-batch fact replay | `CROSS_BATCH_RECORD_OWNERSHIP` | shipments/budgets | Preserve the first owner and quarantine an exact later replay | warning |
 | Required customer | `MISSING_CUSTOMER_ID` | shipments/invoices | Quarantine row | error |
 | Required cost center | `MISSING_COST_CENTER_ID` | shipments/invoices/budgets | Quarantine row | error |
 | Finite financial value | `INVALID_FINANCIAL_VALUE` | monetary facts | Reject malformed, non-finite, or forbidden negative values | error |
@@ -36,3 +37,12 @@ Valid rows from a controlled `quality_failed` batch are published, while invalid
 quarantine. The batch remains visible in quality history but does not advance the trusted refresh
 timestamp. Direct consumers of local Silver must therefore apply the processed-state refresh gate;
 the future Delta adapter will provide transactional release semantics.
+
+Cross-batch shipment and budget payloads are normalized before comparison. An exact repeat emits
+noncritical ownership evidence and leaves the first contribution unchanged. A conflicting
+monetary payload raises `CrossBatchCollisionError`; it is an execution failure, not a row-quality
+result, because Slice 001.2 does not define a generalized non-invoice correction policy.
+
+Claim-manifest, state, and committed-artifact attestation failures are likewise execution
+failures. They use typed integrity errors and must not publish trusted state. Dimension and
+exchange-rate reference ownership remains outside the Slice 001.2 claim architecture.

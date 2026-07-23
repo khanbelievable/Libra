@@ -20,8 +20,14 @@
 - [Backlog](BACKLOG.md) — vertical slices, dependencies, tests, and evidence.
 - [Slice 001 engineering review](SLICE_001_REVIEW.md) — completed work, decisions, evidence, and open questions.
 - [Independent Slice 001 review](REVIEW_LOG.md) — reproduced findings and remediation status.
+- [Independent Slice 001.1 re-review](RE_REVIEW_SLICE_001_1.md) — preserved findings and
+  Slice 001.2 remediation references.
 - [Slice 001.1 remediation handoff](handoffs/CODEX_REMEDIATION_SLICE_001_1.md) — commits,
   verification, limitations, and re-review questions.
+- [Slice 001.2 remediation plan](handoffs/CODEX_REMEDIATION_PLAN_001_2.md) — root causes,
+  invariants, migration policy, and planned evidence.
+- [Slice 001.2 remediation handoff](handoffs/CODEX_REMEDIATION_SLICE_001_2.md) — final commits,
+  verification, limitations, and narrow re-review questions.
 
 ## Architecture decision records
 

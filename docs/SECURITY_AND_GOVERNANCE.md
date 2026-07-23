@@ -3,10 +3,14 @@
 ## Local CSV handling
 
 Bronze preserves exact source bytes and should be treated as untrusted evidence. Silver,
-quarantine, claims, and quality CSV publications prefix cells beginning with spreadsheet formula
-characters (`=`, `+`, `-`, `@`, tab, or carriage return) so steward review does not execute source
-text as a formula. Consumers needing exact raw values use Bronze and must disable formula
-evaluation.
+quarantine, claims, and quality CSV publications preserve canonical values exactly so keys,
+digests, ownership, and reconciliation remain stable. They are data interchange artifacts and
+must not be opened as trusted spreadsheets.
+
+When a steward needs a spreadsheet-oriented extract, the explicit export boundary prefixes cells
+beginning with spreadsheet formula characters (`=`, `+`, `-`, `@`, tab, or carriage return).
+That derivative export is presentation-only and must never feed processing, claims, or
+reconciliation.
 
 Libra uses synthetic data only. Customer names and identifiers are fictional and deterministic. Generated datasets are not committed.
 
@@ -17,7 +21,8 @@ Libra uses synthetic data only. Customer names and identifiers are fictional and
 - Databricks service principals receive write access only to their catalog/schema paths.
 - Snowflake separates loader, transformer/owner, finance-reader, and data-quality-reader roles.
 - Power BI users consume governed views; workspace authors do not receive warehouse ownership.
-- Batch manifests, quality outcomes, reconciliation evidence, and correction lineage form the audit trail.
+- Batch manifests, claim and artifact attestations, quality outcomes, reconciliation evidence,
+  inflight recovery markers, and correction lineage form the audit trail.
 - Quarantine access is more restrictive than aggregate reporting because future source records may contain business identifiers.
 
 ## Data lifecycle

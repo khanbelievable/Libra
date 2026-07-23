@@ -4,7 +4,7 @@ Slice 001 documents the semantic/report contract but does not generate a fake PB
 
 ## Completion workflow in Power BI Desktop
 
-1. Create a PBIP project named `DataLibraFinance` and connect to the governed Snowflake `REPORTING` views.
+1. Create a PBIP project named `Libra` and connect to the governed Snowflake `REPORTING` views.
 2. Rename imported tables to the names in `semantic-model/RELATIONSHIPS.md`.
 3. Configure relationships exactly as documented; hide technical keys and raw additive fields from report consumers.
 4. Add the measures from `dax/MEASURES.dax` and format EUR/percent/count values.

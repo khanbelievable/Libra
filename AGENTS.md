@@ -11,6 +11,12 @@ item and leave the repository runnable after each commit.
   ordering as contracts. Record material changes in tests and documentation.
 - Preserve immutable Bronze evidence. Invalid or disputed financial records must not enter
   trusted Silver.
+- Preserve immutable arrival sequence and batch-owned claim manifests. The aggregate claims CSV
+  is a verified rebuildable index, never an independent authority.
+- Treat claim and committed-artifact attestations as replay preconditions. Processed state is
+  written last; an inflight marker supports recovery but never represents success.
+- Preserve canonical values in internal CSVs. Spreadsheet neutralization is permitted only at an
+  explicit export boundary whose output cannot re-enter processing.
 - Keep the local adapter dependency-free and single-writer. Cloud adapters are separate
   backlog work and must not be represented as deployed before executable evidence exists.
 - Use Conventional Commits and keep each commit logically complete.

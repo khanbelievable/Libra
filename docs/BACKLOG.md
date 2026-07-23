@@ -27,7 +27,25 @@ Status values: `DONE`, `IN PROGRESS`, `PLANNED`.
 - **Demo evidence:** full automated suite, four CLI scenarios, coverage report, and
   `docs/handoffs/CODEX_REMEDIATION_SLICE_001_1.md`.
 - **Dependencies:** LIBRA-001 and independent review at `40ac981`.
-- **Completion status:** DONE; awaiting independent Claude re-review before Slice 002 starts.
+- **Completion status:** DONE; independent re-review completed with changes required. Findings
+  are recorded in `docs/RE_REVIEW_SLICE_001_1.md`.
+
+## LIBRA-001.2 — Claims integrity remediation
+
+- **Goal:** Close the Slice 001.1 re-review findings without expanding the product boundary.
+- **Business value:** Makes financial ownership stable, independently attests durable claims and
+  committed run evidence, and proves deterministic crash recovery.
+- **Components affected:** claims, replay state, local storage, reconciliation, CSV boundaries,
+  non-invoice ownership policy, tests, ADRs, and handoff evidence.
+- **Acceptance criteria:** Slice 001 criteria plus the claims-integrity additions in
+  `docs/ACCEPTANCE_CRITERIA.md`.
+- **Required tests:** arrival-order permutations, financial-identity conflicts, manifest and
+  aggregate corruption, no-op artifact corruption, fault-injected publication recovery,
+  canonical CSV round trips, non-invoice collisions, determinism, paths, and wheel smoke.
+- **Demo evidence:** full automated suite, CLI healthy/broken runs, branch coverage, wheel install,
+  and `docs/handoffs/CODEX_REMEDIATION_SLICE_001_2.md`.
+- **Dependencies:** LIBRA-001.1 and independent re-review at `54748ff`.
+- **Completion status:** DONE; awaiting narrow independent re-review before Slice 002 starts.
 
 ## LIBRA-002 — Operational cost and route profitability
 
@@ -37,7 +55,7 @@ Status values: `DONE`, `IN PROGRESS`, `PLANNED`.
 - **Acceptance criteria:** Cost transactions reconcile; route/customer gross profit is reproducible; invalid references are quarantined.
 - **Required tests:** cost allocation, negative/credit handling, route joins, aggregate reconciliation.
 - **Demo evidence:** route and customer profitability extracts.
-- **Dependencies:** LIBRA-001.1 and reviewer approval to proceed.
+- **Dependencies:** LIBRA-001.2 and reviewer approval to proceed.
 - **Completion status:** PLANNED (review gate not yet cleared).
 
 ## LIBRA-003 — Late arrival and correction lifecycle

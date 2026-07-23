@@ -65,7 +65,9 @@ flowchart TD
     Same -->|yes| NoOp["No-op; preserve prior outputs"]
     Same -->|no| Bronze["Write batch-addressed Bronze"]
     Bronze --> Checks["Standardize and run rules"]
-    Checks --> Claims["Resolve active invoice claims"]
+    Checks --> Manifest["Publish + attest batch-owned claims"]
+    Manifest --> Index["Rebuild verified aggregate claim index"]
+    Index --> Claims["Resolve by explicit arrival sequence"]
     Claims --> Valid{"Row/partition trusted?"}
     Valid -->|yes| Merge["Replace only this batch contribution"]
     Valid -->|no| Quarantine["Replace prior batch quarantine; store reasons"]
@@ -87,14 +89,28 @@ The domain layer works on typed row mappings and produces explicit valid rows, q
 - An unreadable schema, corrupt manifest, or storage failure is an execution failure.
 - Bronze is addressed by batch ID and a checked 80-bit SHA-256 prefix in a flat path, while the full fingerprint is retained in provenance, manifest, summary, and state. An identifier collision fails rather than overwriting evidence.
 - The local adapter is single-writer. Per-file replacement is atomic and processed state is written last; rerun is the crash-recovery mechanism.
-- Invoice ownership is resolved from active per-batch claims. Exact cross-batch replays keep the
-  earliest owner; conflicting canonical payloads withhold all claims until correction.
+- Every accepted batch receives an immutable positive `arrival_sequence`. New values are
+  `max(existing) + 1`; JSON/dictionary order, batch ID, timestamps, filenames, and filesystem order
+  never rank normal ownership.
+- `claims/invoices/<batch_id>.csv` is the batch-owned invoice contribution. State attests its
+  count, exact digest, and business-key digest. `claims/invoices.csv` is a verified rebuildable
+  index, never an independent authority.
+- Exact replay requires an identical normalized financial claim including source amount,
+  currency, translation date, applied rate, translated EUR amount, dimensions, and shipment.
+  Conflicting financial fingerprints withhold all active invoice occurrences.
 - Committed-output reconciliation reads through `PipelineStorage`; it does not attest an
   in-memory partition as though it were persisted data.
 - Replay identity combines source fingerprint, package pipeline version, data-contract version,
   and deterministic quality-rules fingerprint. A mismatch rebuilds instead of returning a no-op.
 - Valid rows from a quality-failed batch publish, but the trusted refresh watermark does not
   advance. Local direct consumers must honor state.
-- Steward-facing CSVs neutralize spreadsheet-formula prefixes. Bronze intentionally retains the
-  exact source payload as immutable evidence.
+- Internal CSVs retain canonical values exactly. Spreadsheet formula neutralization is an
+  explicit presentation/export operation whose output is never read as canonical storage.
+- Shipment and budget exact cross-batch repeats retain the existing owner and write noncritical
+  evidence; conflicting monetary payloads fail closed. Dimensions and FX references do not have
+  generalized claim ownership in Slice 001.2 and remain a documented limitation.
+- Publication order is: verify active attestations; Bronze; inflight recovery marker; batch claim
+  manifest; aggregate claims index; Silver/quarantine; committed reconciliation; quality;
+  reconciliation JSON; summary; processed state last. The marker never represents success and is
+  cleared after state. An exact retry converges at every boundary.
 - Timestamps used in generated demo evidence come from deterministic batch metadata. A production adapter uses the orchestrator's UTC execution timestamp.

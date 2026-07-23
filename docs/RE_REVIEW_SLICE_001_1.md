@@ -12,6 +12,28 @@
 Every status below is based on my own probe scripts and command runs at `54748ff`, not on
 Codex's reported results. Line references are to the re-reviewed commit.
 
+## Slice 001.2 remediation references
+
+The evidence below remains the unchanged historical re-review of `54748ff`. Slice 001.2 starts at
+that commit and records its design in
+[`CODEX_REMEDIATION_PLAN_001_2.md`](handoffs/CODEX_REMEDIATION_PLAN_001_2.md).
+
+| Finding | Slice 001.2 disposition | Executable evidence |
+|---|---|---|
+| LIB-RR-001 | **REMEDIATED** — state carries immutable monotonic arrival sequence; normalized financial fingerprints include applied FX and EUR result | `test_cross_batch_dedup.py`, `test_replay_state.py` |
+| LIB-RR-002 | **REMEDIATED** — state-attested batch manifests are authoritative; aggregate claims are verified/rebuildable | `test_claim_integrity.py` |
+| LIB-RR-003 | **REMEDIATED** — guard measures actual paths against the explicit practical Windows limit | `test_pipeline.py` |
+| LIB-RR-004 | **REMEDIATED** — quality publication is read back and state-attested | `test_noop_integrity.py` |
+| LIB-RR-005 | **REMEDIATED** — no-op validates Silver, claims, quarantine, quality, reconciliation, and summary evidence | `test_noop_integrity.py` |
+| LIB-RR-006 | **REMEDIATED** — internal CSVs preserve canonical keys; neutralization is export-only | `test_csv_safety.py` |
+| LIB-RR-007 | **REMEDIATED / BOUNDED POLICY** — shipment/budget exact repeats retain first owner; conflicts fail closed; reference/dimension behavior is explicitly limited | `test_non_invoice_ownership.py` |
+| LIB-RR-008 | **REMEDIATED** — malformed state names the file and ordered-replay recovery | `test_replay_state.py` |
+| LIB-RR-009 | **REMEDIATED (DOCS)** — future atomic scope includes claims, reconciliation, and summaries | ADR-003 and Architecture |
+| LIB-RR-010 | **REMEDIATED** — planned PBIP project name is `Libra` | `powerbi/README.md` |
+
+Final commands, commits, migration behavior, and re-review questions are recorded in
+[`CODEX_REMEDIATION_SLICE_001_2.md`](handoffs/CODEX_REMEDIATION_SLICE_001_2.md).
+
 ## Status summary — original findings
 
 | Finding | Original severity | Status |
