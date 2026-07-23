@@ -9,6 +9,7 @@ from pathlib import Path
 from typing import Any
 
 from datalibra.domain.contracts import fingerprint_storage_id
+from datalibra.domain.errors import StateIntegrityError
 
 
 def read_csv(path: Path) -> list[dict[str, str]]:
@@ -234,9 +235,37 @@ class LocalCsvStorage:
         path = self.root / "state" / "processed_batches.json"
         if not path.exists():
             return {"batches": {}, "latest_successful_refresh_timestamp": None}
-        with path.open(encoding="utf-8") as handle:
-            state: dict[str, Any] = json.load(handle)
+        try:
+            with path.open(encoding="utf-8") as handle:
+                state: dict[str, Any] = json.load(handle)
+        except json.JSONDecodeError as error:
+            raise StateIntegrityError(
+                f"STATE_JSON_INVALID: {path} is not valid JSON. Restore a valid backup or "
+                "archive the processed output and replay source batches in true arrival order."
+            ) from error
         return state
+
+    def read_inflight(self) -> dict[str, Any] | None:
+        path = self.root / "state" / "inflight.json"
+        if not path.exists():
+            return None
+        try:
+            with path.open(encoding="utf-8") as handle:
+                value: dict[str, Any] = json.load(handle)
+        except json.JSONDecodeError as error:
+            raise StateIntegrityError(
+                f"INFLIGHT_JSON_INVALID: {path} is not valid JSON. Inspect or archive the "
+                "processed output before retrying."
+            ) from error
+        return value
+
+    def write_inflight(self, value: dict[str, Any]) -> None:
+        write_json_atomic(self.root / "state" / "inflight.json", value)
+
+    def clear_inflight(self) -> None:
+        path = self.root / "state" / "inflight.json"
+        if path.exists():
+            path.unlink()
 
     def write_state(self, state: dict[str, Any]) -> None:
         write_json_atomic(self.root / "state" / "processed_batches.json", state)

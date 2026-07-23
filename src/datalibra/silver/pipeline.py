@@ -370,6 +370,7 @@ def _verify_active_artifacts(
     *,
     current_batch_id: str,
     allow_current_rebuild: bool,
+    allow_inflight_recovery: bool,
 ) -> bool:
     """Verify prior evidence; return whether the current batch needs rebuilding."""
 
@@ -390,6 +391,8 @@ def _verify_active_artifacts(
         except (FileNotFoundError, KeyError, TypeError, ValueError):
             actual = {}
         if actual != expected:
+            if allow_inflight_recovery:
+                continue
             if stored_batch_id == current_batch_id:
                 current_rebuild_required = True
                 continue
@@ -513,6 +516,18 @@ def process_batch(
 
     storage_adapter = storage or LocalCsvStorage(output_root)
     state = storage_adapter.read_state()
+    inflight = storage_adapter.read_inflight()
+    inflight_recovery = False
+    if inflight is not None:
+        inflight_recovery = (
+            inflight.get("batch_id") == batch_id and inflight.get("fingerprint") == fingerprint
+        )
+        if not inflight_recovery:
+            raise StateIntegrityError(
+                "INFLIGHT_RECOVERY_REQUIRED: an interrupted publication exists for batch "
+                f"{inflight.get('batch_id')!r}. Retry that exact batch and fingerprint before "
+                "processing another delivery."
+            )
     arrival_sequences, arrival_sequence, migrated_legacy = _arrival_sequences(state, batch_id)
     prior = state.get("batches", {}).get(batch_id)
     replay_identity = {
@@ -551,6 +566,7 @@ def process_batch(
         project_config.ordered_datasets,
         current_batch_id=batch_id,
         allow_current_rebuild=migrated_legacy or not identity_compatible,
+        allow_inflight_recovery=inflight_recovery,
     )
     if (
         prior
@@ -568,6 +584,8 @@ def process_batch(
                 extra={"batch_id": batch_id, "scenario": scenario},
             )
         else:
+            if inflight_recovery:
+                storage_adapter.clear_inflight()
             LOGGER.info(
                 "Batch already processed; returning no-op",
                 extra={
@@ -759,6 +777,18 @@ def process_batch(
     current_claim_attestation = rows_attestation(
         valid["invoices"], business_key=INVOICE_BUSINESS_KEY
     )
+    inflight_record = {
+        "batch_id": batch_id,
+        "fingerprint": fingerprint,
+        "arrival_sequence": arrival_sequence,
+        "invoice_claim_attestation": current_claim_attestation,
+    }
+    storage_adapter.write_inflight(inflight_record)
+    if storage_adapter.read_inflight() != inflight_record:
+        raise ArtifactIntegrityError(
+            "INFLIGHT_PUBLICATION_FAILED: recovery marker did not read back before claim "
+            "publication."
+        )
     storage_adapter.replace_batch_claim_manifest("invoices", batch_id, valid["invoices"])
     committed_current_claims = storage_adapter.read_batch_claim_manifest("invoices", batch_id)
     if not attestation_matches(
@@ -1074,6 +1104,7 @@ def process_batch(
         state["latest_successful_refresh_timestamp"] = timestamp
     state["next_arrival_sequence"] = max(arrival_sequences.values(), default=0) + 1
     storage_adapter.write_state(state)
+    storage_adapter.clear_inflight()
     LOGGER.info(
         "Batch processing completed",
         extra={"batch_id": batch_id, "scenario": scenario, "status": status},

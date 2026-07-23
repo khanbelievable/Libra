@@ -126,3 +126,15 @@ def test_ambiguous_multi_batch_legacy_state_requires_ordered_replay(tmp_path: Pa
 
     with pytest.raises(StateIntegrityError, match="STATE_MIGRATION_REQUIRED"):
         process_batch(first, output)
+
+
+@pytest.mark.integration
+def test_malformed_state_names_file_and_recovery_policy(tmp_path: Path) -> None:
+    batch = generate_scenario("healthy", tmp_path / "input")
+    output = tmp_path / "output"
+    process_batch(batch, output)
+    state_path = output / "state" / "processed_batches.json"
+    state_path.write_text("{not-json", encoding="utf-8")
+
+    with pytest.raises(StateIntegrityError, match=r"STATE_JSON_INVALID.*processed_batches"):
+        process_batch(batch, output)

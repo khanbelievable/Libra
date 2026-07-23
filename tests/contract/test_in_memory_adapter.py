@@ -25,6 +25,7 @@ class InMemoryStorage:
             "batches": {},
             "latest_successful_refresh_timestamp": None,
         }
+        self.inflight: dict[str, Any] | None = None
         self.reconciliation: dict[str, dict[str, Any]] = {}
         self.summaries: dict[str, dict[str, Any]] = {}
 
@@ -112,6 +113,15 @@ class InMemoryStorage:
 
     def read_state(self) -> dict[str, Any]:
         return deepcopy(self.state)
+
+    def read_inflight(self) -> dict[str, Any] | None:
+        return deepcopy(self.inflight)
+
+    def write_inflight(self, value: dict[str, Any]) -> None:
+        self.inflight = deepcopy(value)
+
+    def clear_inflight(self) -> None:
+        self.inflight = None
 
     def write_state(self, state: dict[str, Any]) -> None:
         self.state = deepcopy(state)
