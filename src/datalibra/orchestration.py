@@ -11,9 +11,7 @@ from datalibra.silver import process_batch
 from datalibra.storage.local import LocalCsvStorage, read_csv, write_json_atomic
 
 
-def run_local_batch(
-    batch_dir: Path, output_root: Path
-) -> tuple[PipelineSummary, dict[str, Any]]:
+def run_local_batch(batch_dir: Path, output_root: Path) -> tuple[PipelineSummary, dict[str, Any]]:
     """Process one batch and rebuild deterministic Gold from committed Silver."""
 
     summary = process_batch(batch_dir, output_root)
@@ -32,9 +30,7 @@ def _monthly_country_row(output_root: Path, month: str, country: str) -> dict[st
 def run_correction_demo(input_root: Path, output_root: Path) -> dict[str, Any]:
     """Run one owner-scoped late cost correction and persist before/after evidence."""
 
-    initial, initial_controls = run_local_batch(
-        input_root / "cost_correction_initial", output_root
-    )
+    initial, initial_controls = run_local_batch(input_root / "cost_correction_initial", output_root)
     before = _monthly_country_row(output_root, "2025-01-01", "DE")
     corrected, corrected_controls = run_local_batch(
         input_root / "cost_correction_corrected", output_root

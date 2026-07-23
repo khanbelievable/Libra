@@ -17,7 +17,7 @@ jobs:
   verify:
     name: Python 3.12 / ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
-    timeout-minutes: 10
+    timeout-minutes: 20
     strategy:
       fail-fast: false
       matrix:
@@ -34,10 +34,16 @@ jobs:
           cache: pip
           cache-dependency-path: pyproject.toml
 
+      - name: Set up Java
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "21"
+
       - name: Install project
         run: |
           python -m pip install --upgrade pip
-          python -m pip install -e ".[dev]"
+          python -m pip install -e ".[dev,spark]"
 
       - name: Lint
         run: python -m ruff check .
@@ -49,13 +55,13 @@ jobs:
         run: python -m mypy src/datalibra
 
       - name: Test with coverage
-        run: python -m pytest -q --cov=datalibra --cov-report=term --cov-fail-under=90
+        run: python -m pytest -q --cov=datalibra --cov-report=term --cov-branch --cov-fail-under=90
 
       - name: Build wheel
         run: python -m pip wheel . --no-deps --wheel-dir dist
 
       - name: Install wheel artifact
-        run: python -m pip install --force-reinstall --find-links dist datalibra==0.1.2
+        run: python -m pip install --force-reinstall --find-links dist datalibra==0.2.0
 
       - name: Smoke-test installed CLI outside checkout
         working-directory: ${{ runner.temp }}

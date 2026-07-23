@@ -27,6 +27,7 @@ Issues = "https://github.com/khanbelievable/Libra/issues"
 [project.optional-dependencies]
 dev = [
   "mypy>=1.15,<2",
+  "PyYAML>=6,<7",
   "pytest>=8.3,<9",
   "pytest-cov>=6,<7",
   "ruff>=0.11,<1",
@@ -37,6 +38,9 @@ spark = [
 
 [project.scripts]
 libra = "datalibra.cli:main"
+libra_land_bronze = "datalibra.databricks.tasks:land_bronze"
+libra_build_silver = "datalibra.databricks.tasks:build_silver"
+libra_build_gold = "datalibra.databricks.tasks:build_gold_and_validate"
 
 [tool.setuptools]
 package-dir = {"" = "src"}
@@ -55,6 +59,7 @@ markers = [
   "contract: schema and adapter contract tests",
   "demo: executable portfolio acceptance evidence",
   "integration: tests crossing storage and domain boundaries",
+  "spark: local PySpark contract and financial parity tests",
 ]
 
 [tool.ruff]

@@ -365,9 +365,7 @@ def build_gold_outputs(
     return outputs, controls
 
 
-def publish_local_gold(
-    output_root: Path, *, config: ProjectConfig | None = None
-) -> dict[str, Any]:
+def publish_local_gold(output_root: Path, *, config: ProjectConfig | None = None) -> dict[str, Any]:
     """Build and atomically publish all local Gold contracts."""
 
     storage = LocalCsvStorage(output_root)
@@ -386,9 +384,7 @@ def publish_local_gold(
             "operational_costs",
         )
     }
-    outputs, controls = build_gold_outputs(
-        silver, storage.read_quality(), config=config
-    )
+    outputs, controls = build_gold_outputs(silver, storage.read_quality(), config=config)
     for name, rows in outputs.items():
         write_csv_atomic(output_root / "gold" / f"{name}.csv", rows, GOLD_FIELDS[name])
     write_json_atomic(output_root / "gold" / "reconciliation.json", controls)

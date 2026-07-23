@@ -134,9 +134,7 @@ def _standardize_dimension(dataset: str, row: dict[str, str]) -> tuple[dict[str,
             result["rate_to_eur"] = ""
     elif dataset == "routes":
         result["origin_country_code"] = normalize_country(result["origin_country_code"])
-        result["destination_country_code"] = normalize_country(
-            result["destination_country_code"]
-        )
+        result["destination_country_code"] = normalize_country(result["destination_country_code"])
         result["transport_mode"] = normalize_code(result["transport_mode"])
         try:
             distance = parse_decimal(result["distance_km"])
@@ -719,9 +717,7 @@ def process_batch(
     shipment_ids = {row["shipment_id"] for row in standardized["shipments"]}
     route_ids = {
         row["route_id"]
-        for row, reasons in zip(
-            standardized["routes"], reasons_by_dataset["routes"], strict=True
-        )
+        for row, reasons in zip(standardized["routes"], reasons_by_dataset["routes"], strict=True)
         if not reasons
     }
     invalid_rate_keys = {

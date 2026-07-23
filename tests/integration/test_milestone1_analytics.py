@@ -98,8 +98,6 @@ def test_cost_correction_changes_history_without_duplicates(tmp_path: Path) -> N
     assert audit["trusted_cost_id_count"] == 2880
     assert audit["trusted_invoice_count"] == 720
     persisted = json.loads(
-        (tmp_path / "output" / "correction" / "cost_correction.json").read_text(
-            encoding="utf-8"
-        )
+        (tmp_path / "output" / "correction" / "cost_correction.json").read_text(encoding="utf-8")
     )
     assert persisted == audit

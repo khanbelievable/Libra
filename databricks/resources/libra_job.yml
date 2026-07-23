@@ -1,0 +1,76 @@
+resources:
+  jobs:
+    milestone_1:
+      name: ${bundle.target}-libra-milestone-1
+      max_concurrent_runs: 1
+      parameters:
+        - name: landing_path
+          default: ${var.landing_path}
+        - name: catalog
+          default: ${var.catalog}
+        - name: schema
+          default: ${var.schema}
+        - name: batch_id
+          default: slice001-healthy
+      tasks:
+        - task_key: land_bronze
+          python_wheel_task:
+            package_name: datalibra
+            entry_point: libra_land_bronze
+            parameters:
+              - --landing-path
+              - "{{job.parameters.landing_path}}"
+              - --catalog
+              - "{{job.parameters.catalog}}"
+              - --schema
+              - "{{job.parameters.schema}}"
+              - --batch-id
+              - "{{job.parameters.batch_id}}"
+          environment_key: default
+          libraries:
+            - whl: ../../dist/*.whl
+        - task_key: build_silver
+          depends_on:
+            - task_key: land_bronze
+          python_wheel_task:
+            package_name: datalibra
+            entry_point: libra_build_silver
+            parameters:
+              - --landing-path
+              - "{{job.parameters.landing_path}}"
+              - --catalog
+              - "{{job.parameters.catalog}}"
+              - --schema
+              - "{{job.parameters.schema}}"
+              - --batch-id
+              - "{{job.parameters.batch_id}}"
+          environment_key: default
+          libraries:
+            - whl: ../../dist/*.whl
+        - task_key: build_gold_and_validate
+          depends_on:
+            - task_key: build_silver
+          python_wheel_task:
+            package_name: datalibra
+            entry_point: libra_build_gold
+            parameters:
+              - --landing-path
+              - "{{job.parameters.landing_path}}"
+              - --catalog
+              - "{{job.parameters.catalog}}"
+              - --schema
+              - "{{job.parameters.schema}}"
+              - --batch-id
+              - "{{job.parameters.batch_id}}"
+          environment_key: default
+          libraries:
+            - whl: ../../dist/*.whl
+      environments:
+        - environment_key: default
+          spec:
+            environment_version: "2"
+            dependencies: []
+      tags:
+        project: Libra
+        milestone: "1"
+
