@@ -159,25 +159,27 @@ class LocalCsvStorage:
         )
         write_csv_atomic(path, combined, fields, protect_spreadsheets=True)
 
-    def replace_batch_claims(
+    def replace_batch_claim_manifest(
         self, dataset: str, batch_id: str, rows: Sequence[dict[str, str]]
     ) -> None:
+        path = self.root / "claims" / dataset / f"{batch_id}.csv"
+        ordered = sorted(rows, key=lambda row: row.get("_source_row_number", ""))
+        write_csv_atomic(path, ordered)
+
+    def read_batch_claim_manifest(self, dataset: str, batch_id: str) -> list[dict[str, str]]:
+        path = self.root / "claims" / dataset / f"{batch_id}.csv"
+        return read_csv(path) if path.exists() and path.stat().st_size else []
+
+    def replace_all_claims(self, dataset: str, rows: Sequence[dict[str, str]]) -> None:
         path = self.root / "claims" / f"{dataset}.csv"
-        existing = read_csv(path) if path.exists() and path.stat().st_size else []
-        retained = [row for row in existing if row.get("_batch_id") != batch_id]
-        combined = [*retained, *(dict(row) for row in rows)]
-        combined.sort(
+        ordered = sorted(
+            rows,
             key=lambda row: (
                 row.get("_batch_id", ""),
                 row.get("_source_row_number", ""),
-            )
+            ),
         )
-        write_csv_atomic(
-            path,
-            combined,
-            _ordered_fields([*rows, *existing]),
-            protect_spreadsheets=True,
-        )
+        write_csv_atomic(path, ordered, _ordered_fields(ordered))
 
     def read_claims(self, dataset: str) -> list[dict[str, str]]:
         path = self.root / "claims" / f"{dataset}.csv"

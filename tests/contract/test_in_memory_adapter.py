@@ -71,11 +71,16 @@ class InMemoryStorage:
         retained = [row for row in self.quality if row.get("batch_id") != batch_id]
         self.quality = [*retained, *deepcopy(list(rows))]
 
-    def replace_batch_claims(
+    def replace_batch_claim_manifest(
         self, dataset: str, batch_id: str, rows: Sequence[dict[str, str]]
     ) -> None:
-        retained = [row for row in self.claims.get(dataset, []) if row.get("_batch_id") != batch_id]
-        self.claims[dataset] = [*retained, *deepcopy(list(rows))]
+        self.claims[f"{dataset}/{batch_id}"] = deepcopy(list(rows))
+
+    def read_batch_claim_manifest(self, dataset: str, batch_id: str) -> list[dict[str, str]]:
+        return deepcopy(self.claims.get(f"{dataset}/{batch_id}", []))
+
+    def replace_all_claims(self, dataset: str, rows: Sequence[dict[str, str]]) -> None:
+        self.claims[dataset] = deepcopy(list(rows))
 
     def read_claims(self, dataset: str) -> list[dict[str, str]]:
         return deepcopy(self.claims.get(dataset, []))

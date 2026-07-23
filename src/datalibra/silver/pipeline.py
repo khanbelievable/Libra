@@ -24,7 +24,8 @@ from datalibra.domain.contracts import (
     financial_claim_fingerprint,
     source_fingerprint,
 )
-from datalibra.domain.errors import StateIntegrityError
+from datalibra.domain.errors import ClaimsIntegrityError, StateIntegrityError
+from datalibra.domain.integrity import attestation_matches, rows_attestation
 from datalibra.domain.models import PipelineStatus, PipelineSummary, QualityResult
 from datalibra.domain.normalization import (
     decimal_string,
@@ -47,6 +48,7 @@ INVOICE_DEDUP_REASON_CODES = frozenset(
         "CONFLICTING_DUPLICATE_INVOICE",
     }
 )
+INVOICE_BUSINESS_KEY = ("invoice_id",)
 
 
 def _load_manifest(batch_dir: Path) -> dict[str, Any]:
@@ -258,6 +260,64 @@ def _arrival_sequences(state: dict[str, Any], batch_id: str) -> tuple[dict[str, 
     return sequences, current_sequence, migrated_legacy
 
 
+def _load_verified_claim_manifests(
+    storage: PipelineStorage,
+    state: dict[str, Any],
+    *,
+    current_batch_id: str,
+    allow_current_rebuild: bool,
+) -> dict[str, list[dict[str, str]]]:
+    """Load independently attested active claim contributions or fail closed."""
+
+    verified: dict[str, list[dict[str, str]]] = {}
+    for stored_batch_id, record in state.get("batches", {}).items():
+        expected = record.get("invoice_claim_attestation")
+        if not isinstance(expected, dict):
+            if stored_batch_id == current_batch_id and allow_current_rebuild:
+                continue
+            raise StateIntegrityError(
+                "STATE_CLAIM_ATTESTATION_MISSING: processed state does not attest invoice "
+                f"claims for batch {stored_batch_id!r}. Replay that batch from source in an "
+                "otherwise valid single-batch legacy workspace, or rebuild the output root in "
+                "true arrival order."
+            )
+        rows = storage.read_batch_claim_manifest("invoices", stored_batch_id)
+        if not attestation_matches(rows, expected, business_key=INVOICE_BUSINESS_KEY):
+            if stored_batch_id == current_batch_id and allow_current_rebuild:
+                continue
+            raise ClaimsIntegrityError(
+                "CLAIM_MANIFEST_INTEGRITY_FAILED: missing, truncated, duplicated, altered, or "
+                f"mis-owned invoice claim contribution for batch {stored_batch_id!r}. Trusted "
+                "Silver was not rewritten; restore the manifest or replay into a clean output "
+                "root."
+            )
+        verified[stored_batch_id] = rows
+    return verified
+
+
+def _verify_claim_aggregate(
+    storage: PipelineStorage, expected_rows: Sequence[dict[str, str]]
+) -> None:
+    committed = storage.read_claims("invoices")
+    expected = rows_attestation(expected_rows, business_key=INVOICE_BUSINESS_KEY)
+    if not attestation_matches(committed, expected, business_key=INVOICE_BUSINESS_KEY):
+        raise ClaimsIntegrityError(
+            "CLAIM_AGGREGATE_INTEGRITY_FAILED: aggregate invoice claims do not match verified "
+            "batch-owned manifests. Trusted Silver was not published."
+        )
+
+
+def _claim_aggregate_matches(
+    storage: PipelineStorage, expected_rows: Sequence[dict[str, str]]
+) -> bool:
+    expected = rows_attestation(expected_rows, business_key=INVOICE_BUSINESS_KEY)
+    return attestation_matches(
+        storage.read_claims("invoices"),
+        expected,
+        business_key=INVOICE_BUSINESS_KEY,
+    )
+
+
 def _business_keys(
     rows: Sequence[dict[str, str]], fields: tuple[str, ...]
 ) -> list[tuple[str, ...]]:
@@ -337,9 +397,33 @@ def process_batch(
         "data_contract_version": DATA_CONTRACT_VERSION,
         "quality_rules_version": project_config.quality_rules_version,
     }
+    allow_current_claim_rebuild = migrated_legacy or (
+        prior is not None and prior.get("fingerprint") != fingerprint
+    )
+    verified_claim_manifests = _load_verified_claim_manifests(
+        storage_adapter,
+        state,
+        current_batch_id=batch_id,
+        allow_current_rebuild=allow_current_claim_rebuild,
+    )
+    verified_prior_claims = [
+        row
+        for stored_batch_id in sorted(
+            verified_claim_manifests,
+            key=lambda item: (arrival_sequences[item], item),
+        )
+        for row in verified_claim_manifests[stored_batch_id]
+    ]
+    claim_aggregate_valid = _claim_aggregate_matches(storage_adapter, verified_prior_claims)
+    if not claim_aggregate_valid and verified_claim_manifests:
+        LOGGER.warning(
+            "CLAIM_AGGREGATE_RECOVERY_REQUIRED: rebuilding aggregate from verified manifests",
+            extra={"batch_id": batch_id, "scenario": scenario},
+        )
     if (
         prior
         and not migrated_legacy
+        and claim_aggregate_valid
         and all(prior.get(key) == value for key, value in replay_identity.items())
     ):
         try:
@@ -530,13 +614,30 @@ def process_batch(
             else:
                 valid[dataset].append(row)
 
-    storage_adapter.replace_batch_claims("invoices", batch_id, valid["invoices"])
-    active_batches = set(arrival_sequences)
+    current_claim_attestation = rows_attestation(
+        valid["invoices"], business_key=INVOICE_BUSINESS_KEY
+    )
+    storage_adapter.replace_batch_claim_manifest("invoices", batch_id, valid["invoices"])
+    committed_current_claims = storage_adapter.read_batch_claim_manifest("invoices", batch_id)
+    if not attestation_matches(
+        committed_current_claims,
+        current_claim_attestation,
+        business_key=INVOICE_BUSINESS_KEY,
+    ):
+        raise ClaimsIntegrityError(
+            "CLAIM_MANIFEST_PUBLICATION_FAILED: current batch invoice claims did not read back "
+            "with the expected count, digest, and business keys."
+        )
+    verified_claim_manifests[batch_id] = committed_current_claims
     active_claims = [
         row
-        for row in storage_adapter.read_claims("invoices")
-        if row.get("_batch_id") in active_batches
+        for active_batch_id in sorted(
+            arrival_sequences, key=lambda item: (arrival_sequences[item], item)
+        )
+        for row in verified_claim_manifests[active_batch_id]
     ]
+    storage_adapter.replace_all_claims("invoices", active_claims)
+    _verify_claim_aggregate(storage_adapter, active_claims)
     all_trusted_invoices, all_dedup_quarantine = _resolve_invoice_claims(
         active_claims, arrival_sequences
     )
@@ -783,6 +884,7 @@ def process_batch(
     batches[batch_id] = {
         **replay_identity,
         "arrival_sequence": arrival_sequence,
+        "invoice_claim_attestation": current_claim_attestation,
         "scenario": scenario,
         "status": status,
         "execution_timestamp": timestamp,
