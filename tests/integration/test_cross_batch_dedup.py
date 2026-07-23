@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import shutil
+from decimal import Decimal
 from pathlib import Path
 
 import pytest
@@ -21,6 +22,14 @@ def _copy_as_batch(source: Path, destination: Path, batch_id: str) -> Path:
         json.dumps(manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8"
     )
     return destination
+
+
+def _prefix_invoice_ids(batch: Path, prefix: str) -> None:
+    invoices = read_rows(batch / "invoices.csv")
+    for row in invoices:
+        row["invoice_id"] = f"{prefix}{row['invoice_id']}"
+    write_rows(batch / "invoices.csv", "invoices", invoices)
+    refresh_manifest(batch)
 
 
 @pytest.mark.integration
@@ -106,3 +115,87 @@ def test_conflicting_claims_are_withheld_and_batch_correction_is_scoped(tmp_path
     final_silver = read_rows(output / "silver" / "invoices.csv")
     assert len(final_silver) == 1440
     assert sum(row["_batch_id"] == "independent-delivery" for row in final_silver) == 720
+
+
+@pytest.mark.integration
+def test_explicit_arrival_sequence_survives_sorted_json_and_unrelated_batch(
+    tmp_path: Path,
+) -> None:
+    zulu = generate_scenario("healthy", tmp_path / "zulu-source")
+    zulu_manifest = json.loads((zulu / "manifest.json").read_text(encoding="utf-8"))
+    zulu_manifest["batch_id"] = "zulu-first"
+    (zulu / "manifest.json").write_text(
+        json.dumps(zulu_manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8"
+    )
+    alpha = _copy_as_batch(zulu, tmp_path / "alpha-source", "alpha-second")
+    middle = _copy_as_batch(zulu, tmp_path / "middle-source", "middle-third")
+    _prefix_invoice_ids(middle, "M-")
+    output = tmp_path / "output"
+
+    process_batch(zulu, output)
+    process_batch(alpha, output)
+    before = [
+        row
+        for row in read_rows(output / "silver" / "invoices.csv")
+        if not row["invoice_id"].startswith("M-")
+    ]
+    before_bytes = json.dumps(before, sort_keys=True, separators=(",", ":")).encode()
+    before_revenue = sum(Decimal(row["amount_eur"]) for row in before)
+
+    process_batch(middle, output)
+
+    after = [
+        row
+        for row in read_rows(output / "silver" / "invoices.csv")
+        if not row["invoice_id"].startswith("M-")
+    ]
+    state = json.loads((output / "state" / "processed_batches.json").read_text(encoding="utf-8"))
+    assert json.dumps(after, sort_keys=True, separators=(",", ":")).encode() == before_bytes
+    assert sum(Decimal(row["amount_eur"]) for row in after) == before_revenue
+    assert {row["_batch_id"] for row in after} == {"zulu-first"}
+    assert state["batches"]["zulu-first"]["arrival_sequence"] == 1
+    assert state["batches"]["alpha-second"]["arrival_sequence"] == 2
+    assert state["batches"]["middle-third"]["arrival_sequence"] == 3
+    assert list(state["batches"]) == ["alpha-second", "middle-third", "zulu-first"]
+
+
+@pytest.mark.integration
+def test_correcting_batch_preserves_arrival_sequence(tmp_path: Path) -> None:
+    first = generate_scenario("healthy", tmp_path / "first")
+    second = _copy_as_batch(first, tmp_path / "second", "second-arrival")
+    output = tmp_path / "output"
+    process_batch(first, output)
+    process_batch(second, output)
+    state_path = output / "state" / "processed_batches.json"
+    before = json.loads(state_path.read_text(encoding="utf-8"))
+
+    invoices = read_rows(second / "invoices.csv")
+    invoices[0]["source_updated_at"] = "2026-07-23T01:02:03Z"
+    write_rows(second / "invoices.csv", "invoices", invoices)
+    refresh_manifest(second)
+    process_batch(second, output)
+
+    after = json.loads(state_path.read_text(encoding="utf-8"))
+    assert before["batches"]["second-arrival"]["arrival_sequence"] == 2
+    assert after["batches"]["second-arrival"]["arrival_sequence"] == 2
+    assert after["next_arrival_sequence"] == 3
+
+
+@pytest.mark.integration
+@pytest.mark.parametrize(
+    ("first_id", "second_id"),
+    [("zulu", "alpha"), ("alpha", "zulu")],
+)
+def test_processing_order_deterministically_selects_actual_first_arrival(
+    tmp_path: Path, first_id: str, second_id: str
+) -> None:
+    source = generate_scenario("healthy", tmp_path / "source")
+    first = _copy_as_batch(source, tmp_path / "first", first_id)
+    second = _copy_as_batch(source, tmp_path / "second", second_id)
+    output = tmp_path / "output"
+
+    process_batch(first, output)
+    process_batch(second, output)
+
+    silver = read_rows(output / "silver" / "invoices.csv")
+    assert {row["_batch_id"] for row in silver} == {first_id}

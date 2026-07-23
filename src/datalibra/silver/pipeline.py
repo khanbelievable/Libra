@@ -24,6 +24,7 @@ from datalibra.domain.contracts import (
     canonical_invoice_payload,
     source_fingerprint,
 )
+from datalibra.domain.errors import StateIntegrityError
 from datalibra.domain.models import PipelineStatus, PipelineSummary, QualityResult
 from datalibra.domain.normalization import (
     decimal_string,
@@ -178,11 +179,10 @@ def _quality_result(
 
 
 def _resolve_invoice_claims(
-    claims: Sequence[dict[str, str]], batch_order: Sequence[str]
+    claims: Sequence[dict[str, str]], arrival_sequences: dict[str, int]
 ) -> tuple[list[dict[str, str]], list[dict[str, str]]]:
     """Resolve active invoice claims without allowing last-write-wins ownership."""
 
-    rank = {batch_id: index for index, batch_id in enumerate(batch_order)}
     by_invoice: dict[str, list[dict[str, str]]] = defaultdict(list)
     for row in claims:
         by_invoice[row["invoice_id"]].append(dict(row))
@@ -193,7 +193,8 @@ def _resolve_invoice_claims(
         occurrences = sorted(
             by_invoice[invoice_id],
             key=lambda row: (
-                rank[row["_batch_id"]],
+                arrival_sequences[row["_batch_id"]],
+                row["_batch_id"],
                 row["_source_row_number"],
             ),
         )
@@ -214,6 +215,47 @@ def _resolve_invoice_claims(
             )
             quarantined.append({**row, "_reason_codes": reason})
     return trusted, quarantined
+
+
+def _arrival_sequences(state: dict[str, Any], batch_id: str) -> tuple[dict[str, int], int, bool]:
+    """Return validated active sequences and the current batch's immutable sequence."""
+
+    batches = state.get("batches", {})
+    legacy = [
+        stored_batch_id
+        for stored_batch_id, record in batches.items()
+        if not isinstance(record.get("arrival_sequence"), int)
+    ]
+    migrated_legacy = False
+    if legacy:
+        if len(batches) == 1 and legacy == [batch_id]:
+            batches[batch_id]["arrival_sequence"] = 1
+            migrated_legacy = True
+        else:
+            raise StateIntegrityError(
+                "STATE_MIGRATION_REQUIRED: legacy processed state has no reliable arrival "
+                "sequence. Archive or clear the processed output and replay all source batches "
+                "in their true arrival order."
+            )
+
+    sequences = {
+        stored_batch_id: int(record["arrival_sequence"])
+        for stored_batch_id, record in batches.items()
+    }
+    if any(sequence <= 0 for sequence in sequences.values()) or len(set(sequences.values())) != len(
+        sequences
+    ):
+        raise StateIntegrityError(
+            "STATE_ARRIVAL_SEQUENCE_INVALID: arrival_sequence values must be unique positive "
+            "integers. Restore a valid state backup or replay batches into a clean output root."
+        )
+
+    if batch_id in sequences:
+        current_sequence = sequences[batch_id]
+    else:
+        current_sequence = max(sequences.values(), default=0) + 1
+        sequences[batch_id] = current_sequence
+    return sequences, current_sequence, migrated_legacy
 
 
 def _business_keys(
@@ -287,6 +329,7 @@ def process_batch(
 
     storage_adapter = storage or LocalCsvStorage(output_root)
     state = storage_adapter.read_state()
+    arrival_sequences, arrival_sequence, migrated_legacy = _arrival_sequences(state, batch_id)
     prior = state.get("batches", {}).get(batch_id)
     replay_identity = {
         "fingerprint": fingerprint,
@@ -294,7 +337,11 @@ def process_batch(
         "data_contract_version": DATA_CONTRACT_VERSION,
         "quality_rules_version": project_config.quality_rules_version,
     }
-    if prior and all(prior.get(key) == value for key, value in replay_identity.items()):
+    if (
+        prior
+        and not migrated_legacy
+        and all(prior.get(key) == value for key, value in replay_identity.items())
+    ):
         try:
             previous = _previous_summary(storage_adapter, batch_id)
         except (FileNotFoundError, KeyError, TypeError, ValueError):
@@ -484,17 +531,14 @@ def process_batch(
                 valid[dataset].append(row)
 
     storage_adapter.replace_batch_claims("invoices", batch_id, valid["invoices"])
-    active_batch_order = list(state.get("batches", {}))
-    if batch_id not in active_batch_order:
-        active_batch_order.append(batch_id)
-    active_batches = set(active_batch_order)
+    active_batches = set(arrival_sequences)
     active_claims = [
         row
         for row in storage_adapter.read_claims("invoices")
         if row.get("_batch_id") in active_batches
     ]
     all_trusted_invoices, all_dedup_quarantine = _resolve_invoice_claims(
-        active_claims, active_batch_order
+        active_claims, arrival_sequences
     )
     valid["invoices"] = [row for row in all_trusted_invoices if row.get("_batch_id") == batch_id]
     quarantine["invoices"].extend(
@@ -738,12 +782,14 @@ def process_batch(
     batches = state.setdefault("batches", {})
     batches[batch_id] = {
         **replay_identity,
+        "arrival_sequence": arrival_sequence,
         "scenario": scenario,
         "status": status,
         "execution_timestamp": timestamp,
     }
     if status == "success":
         state["latest_successful_refresh_timestamp"] = timestamp
+    state["next_arrival_sequence"] = max(arrival_sequences.values(), default=0) + 1
     storage_adapter.write_state(state)
     LOGGER.info(
         "Batch processing completed",

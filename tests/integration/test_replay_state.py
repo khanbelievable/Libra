@@ -1,12 +1,14 @@
 from __future__ import annotations
 
 import json
+import shutil
 from pathlib import Path
 
 import pytest
 
 from datalibra import PIPELINE_VERSION
 from datalibra.domain.contracts import DATA_CONTRACT_VERSION
+from datalibra.domain.errors import StateIntegrityError
 from datalibra.generators import generate_scenario
 from datalibra.silver import process_batch
 from datalibra.storage.local import LocalCsvStorage
@@ -80,3 +82,47 @@ def test_state_is_committed_last_and_interrupted_run_is_replayable(tmp_path: Pat
     state = json.loads(state_path.read_text(encoding="utf-8"))
     assert recovered.status == "success"
     assert state["batches"][recovered.batch_id]["status"] == "success"
+
+
+@pytest.mark.integration
+def test_single_batch_legacy_state_migrates_only_through_replay(tmp_path: Path) -> None:
+    batch = generate_scenario("healthy", tmp_path / "input")
+    output = tmp_path / "output"
+    process_batch(batch, output)
+    state_path = output / "state" / "processed_batches.json"
+    state = json.loads(state_path.read_text(encoding="utf-8"))
+    state["batches"]["slice001-healthy"].pop("arrival_sequence")
+    state.pop("next_arrival_sequence")
+    state_path.write_text(json.dumps(state, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+
+    migrated = process_batch(batch, output)
+
+    committed = json.loads(state_path.read_text(encoding="utf-8"))
+    assert migrated.status == "success"
+    assert committed["batches"]["slice001-healthy"]["arrival_sequence"] == 1
+    assert committed["next_arrival_sequence"] == 2
+
+
+@pytest.mark.integration
+def test_ambiguous_multi_batch_legacy_state_requires_ordered_replay(tmp_path: Path) -> None:
+    first = generate_scenario("healthy", tmp_path / "first")
+    second = tmp_path / "second"
+    shutil.copytree(first, second)
+    manifest_path = second / "manifest.json"
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    manifest["batch_id"] = "second"
+    manifest_path.write_text(
+        json.dumps(manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8"
+    )
+    output = tmp_path / "output"
+    process_batch(first, output)
+    process_batch(second, output)
+    state_path = output / "state" / "processed_batches.json"
+    state = json.loads(state_path.read_text(encoding="utf-8"))
+    for record in state["batches"].values():
+        record.pop("arrival_sequence")
+    state.pop("next_arrival_sequence")
+    state_path.write_text(json.dumps(state, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+
+    with pytest.raises(StateIntegrityError, match="STATE_MIGRATION_REQUIRED"):
+        process_batch(first, output)
