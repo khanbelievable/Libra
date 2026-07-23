@@ -21,7 +21,7 @@ from datalibra.domain.contracts import (
     IDENTIFIER_FIELDS,
     MONETARY_FIELD,
     SOURCE_FIELDS,
-    canonical_invoice_payload,
+    financial_claim_fingerprint,
     source_fingerprint,
 )
 from datalibra.domain.errors import StateIntegrityError
@@ -198,7 +198,7 @@ def _resolve_invoice_claims(
                 row["_source_row_number"],
             ),
         )
-        payloads = {canonical_invoice_payload(row) for row in occurrences}
+        payloads = {financial_claim_fingerprint(row) for row in occurrences}
         if len(payloads) > 1:
             quarantined.extend(
                 {**row, "_reason_codes": "CONFLICTING_DUPLICATE_INVOICE"} for row in occurrences

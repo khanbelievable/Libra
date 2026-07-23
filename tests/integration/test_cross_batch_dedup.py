@@ -199,3 +199,72 @@ def test_processing_order_deterministically_selects_actual_first_arrival(
 
     silver = read_rows(output / "silver" / "invoices.csv")
     assert {row["_batch_id"] for row in silver} == {first_id}
+
+
+@pytest.mark.integration
+@pytest.mark.parametrize("reverse_order", [False, True])
+def test_different_applied_fx_rate_is_a_conflict_in_every_processing_order(
+    tmp_path: Path, reverse_order: bool
+) -> None:
+    original = generate_scenario("healthy", tmp_path / "original")
+    changed = _copy_as_batch(original, tmp_path / "changed", "fx-changed")
+    original_invoices = read_rows(original / "invoices.csv")
+    changed_invoices = read_rows(changed / "invoices.csv")
+    target_index = next(
+        index for index, row in enumerate(original_invoices) if row["currency_code"] == "GBP"
+    )
+    target_id = original_invoices[target_index]["invoice_id"]
+    for row in changed_invoices:
+        row["invoice_id"] = f"B-{row['invoice_id']}"
+    changed_invoices[target_index]["invoice_id"] = target_id
+    rates = read_rows(changed / "exchange_rates.csv")
+    target_date = changed_invoices[target_index]["invoice_date"]
+    target_rate = next(
+        row for row in rates if row["rate_date"] == target_date and row["currency_code"] == "GBP"
+    )
+    target_rate["rate_to_eur"] = str(Decimal(target_rate["rate_to_eur"]) + Decimal("0.100000"))
+    write_rows(changed / "invoices.csv", "invoices", changed_invoices)
+    write_rows(changed / "exchange_rates.csv", "exchange_rates", rates)
+    refresh_manifest(changed)
+    output = tmp_path / "output"
+
+    batches = [changed, original] if reverse_order else [original, changed]
+    for batch in batches:
+        process_batch(batch, output)
+
+    silver = read_rows(output / "silver" / "invoices.csv")
+    quarantine = [
+        row
+        for row in read_rows(output / "quarantine" / "invoices.csv")
+        if row["invoice_id"] == target_id
+    ]
+    unrelated_changed_id = changed_invoices[target_index + 1]["invoice_id"]
+    assert not any(row["invoice_id"] == target_id for row in silver)
+    assert len(quarantine) == 2
+    assert {row["_reason_codes"] for row in quarantine} == {"CONFLICTING_DUPLICATE_INVOICE"}
+    assert any(row["invoice_id"] == unrelated_changed_id for row in silver)
+    assert len(silver) == 1438
+
+
+@pytest.mark.integration
+def test_formatting_only_differences_normalize_to_exact_replay(tmp_path: Path) -> None:
+    original = generate_scenario("healthy", tmp_path / "original")
+    formatted = _copy_as_batch(original, tmp_path / "formatted", "formatted-replay")
+    invoices = read_rows(formatted / "invoices.csv")
+    target_id = invoices[0]["invoice_id"]
+    invoices[0]["customer_id"] = f"  {invoices[0]['customer_id'].lower()}  "
+    invoices[0]["revenue_amount"] = f"00{invoices[0]['revenue_amount']}"
+    write_rows(formatted / "invoices.csv", "invoices", invoices)
+    refresh_manifest(formatted)
+    output = tmp_path / "output"
+
+    process_batch(original, output)
+    process_batch(formatted, output)
+
+    target_quarantine = [
+        row
+        for row in read_rows(output / "quarantine" / "invoices.csv")
+        if row["invoice_id"] == target_id and row["_batch_id"] == "formatted-replay"
+    ]
+    assert len(target_quarantine) == 1
+    assert target_quarantine[0]["_reason_codes"] == "CROSS_BATCH_DUPLICATE_INVOICE"

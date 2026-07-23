@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import hashlib
+import json
 import re
 from collections.abc import Iterable
 from pathlib import Path
@@ -66,7 +67,9 @@ IDENTIFIER_FIELDS = {
     "budgets": ("cost_center_id",),
 }
 
-INVOICE_CANONICAL_FIELDS = (
+INVOICE_BUSINESS_KEY = ("invoice_id",)
+
+INVOICE_FINANCIAL_CLAIM_FIELDS = (
     "invoice_id",
     "shipment_id",
     "invoice_date",
@@ -75,6 +78,8 @@ INVOICE_CANONICAL_FIELDS = (
     "cost_center_id",
     "currency_code",
     "revenue_amount",
+    "fx_rate_to_eur",
+    "amount_eur",
 )
 
 STORAGE_ID_HEX_LENGTH = 20
@@ -100,7 +105,21 @@ def fingerprint_storage_id(fingerprint: str) -> str:
     return fingerprint[:STORAGE_ID_HEX_LENGTH]
 
 
-def canonical_invoice_payload(row: dict[str, str]) -> tuple[str, ...]:
-    """Return business fields used to distinguish replay from conflict."""
+def canonical_financial_claim_payload(row: dict[str, str]) -> tuple[str, ...]:
+    """Return normalized fields that determine invoice identity and EUR result."""
 
-    return tuple(row[field] for field in INVOICE_CANONICAL_FIELDS)
+    return tuple(row[field] for field in INVOICE_FINANCIAL_CLAIM_FIELDS)
+
+
+def financial_claim_fingerprint(row: dict[str, str]) -> str:
+    """Hash a normalized invoice claim independently of CSV representation."""
+
+    payload = dict(
+        zip(
+            INVOICE_FINANCIAL_CLAIM_FIELDS,
+            canonical_financial_claim_payload(row),
+            strict=True,
+        )
+    )
+    canonical = json.dumps(payload, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
+    return hashlib.sha256(canonical.encode()).hexdigest()
