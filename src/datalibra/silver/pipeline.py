@@ -463,12 +463,15 @@ def _merged_silver_rows(
     return [merged[key] for key in sorted(merged)]
 
 
-def _normalized_record_payload(row: dict[str, str]) -> dict[str, str]:
-    return {
-        field: value
-        for field, value in row.items()
-        if field not in {"_batch_id", "_source_row_number", "_reason_codes"}
+def _normalized_source_payload(row: dict[str, str]) -> dict[str, str]:
+    ignored_fields = {
+        "_batch_id",
+        "_source_row_number",
+        "_reason_codes",
+        "fx_rate_to_eur",
+        "amount_eur",
     }
+    return {field: value for field, value in row.items() if field not in ignored_fields}
 
 
 def _protect_non_invoice_financial_ownership(
@@ -494,7 +497,7 @@ def _protect_non_invoice_financial_ownership(
             if existing is None:
                 retained_incoming.append(row)
                 continue
-            if _normalized_record_payload(existing) != _normalized_record_payload(row):
+            if _normalized_source_payload(existing) != _normalized_source_payload(row):
                 raise CrossBatchCollisionError(
                     "CROSS_BATCH_FINANCIAL_COLLISION: conflicting "
                     f"{dataset} business key {key!r} is already owned by batch "

@@ -11,8 +11,10 @@ from pyspark.sql import functions as F
 from pyspark.sql.types import DateType, DecimalType
 
 from datalibra.databricks.gold import build_gold_dataframes
+from datalibra.databricks.schemas import bronze_schema, source_schema
 from datalibra.databricks.tasks import _read_source_frames
-from datalibra.databricks.transforms import standardize_batch
+from datalibra.databricks.transforms import quality_results, standardize_batch
+from datalibra.domain.contracts import DATASET_ORDER, SOURCE_FIELDS
 from datalibra.generators import generate_scenario
 from datalibra.orchestration import run_local_batch
 
@@ -37,6 +39,21 @@ def spark(tmp_path_factory: pytest.TempPathFactory) -> Any:
 def _frames(spark: Any, batch: Path) -> dict[str, Any]:
     manifest = json.loads((batch / "manifest.json").read_text(encoding="utf-8"))
     return _read_source_frames(spark, batch.as_posix(), manifest)
+
+
+@pytest.mark.spark
+@pytest.mark.contract
+def test_pyspark_source_and_bronze_schemas_cover_every_dataset() -> None:
+    provenance = [
+        "_batch_id",
+        "_source_file",
+        "_source_row_number",
+        "_source_fingerprint",
+        "_ingested_at",
+    ]
+    for dataset in DATASET_ORDER:
+        assert source_schema(dataset).fieldNames() == list(SOURCE_FIELDS[dataset])
+        assert bronze_schema(dataset).fieldNames() == [*SOURCE_FIELDS[dataset], *provenance]
 
 
 @pytest.mark.spark
@@ -73,6 +90,32 @@ def test_pyspark_silver_uses_decimal_types_and_quarantines_cost_failures(
         "UNKNOWN_CURRENCY_CODE",
         "UNKNOWN_ROUTE_ID",
         "UNKNOWN_SHIPMENT_ID",
+    }
+
+    quality = quality_results(
+        broken_quarantine,
+        "slice001-invalid-costs",
+        "2026-07-23T00:00:00+00:00",
+    )
+    quality_rows = {(row["rule_name"], row["affected_dataset"]): row for row in quality.collect()}
+    assert len(quality_rows) == 38
+    assert quality_rows[("VALID_COST_TYPE", "operational_costs")]["validation_status"] == "FAIL"
+    assert quality_rows[("VALID_COST_TYPE", "operational_costs")]["failed_row_count"] == 1
+    assert quality_rows[("REFERENTIAL_INTEGRITY", "routes")]["validation_status"] == "PASS"
+
+    gold_quality = build_gold_dataframes(broken_trusted, quality)["gold_data_quality_summary"]
+    assert gold_quality.count() == 38
+    failed_rules = {
+        row["rule_name"]
+        for row in gold_quality.filter(F.col("validation_status") == "FAIL")
+        .select("rule_name")
+        .collect()
+    }
+    assert failed_rules == {
+        "EXCHANGE_RATE_EXISTS",
+        "FINITE_FINANCIAL_VALUES",
+        "REFERENTIAL_INTEGRITY",
+        "VALID_COST_TYPE",
     }
 
 

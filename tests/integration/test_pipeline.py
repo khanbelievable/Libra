@@ -13,6 +13,53 @@ from tests.helpers import read_rows, refresh_manifest, write_rows
 
 
 @pytest.mark.integration
+def test_missing_manifest_is_rejected_before_any_output(tmp_path: Path) -> None:
+    batch = tmp_path / "missing"
+    batch.mkdir()
+
+    with pytest.raises(FileNotFoundError, match="Missing batch manifest"):
+        process_batch(batch, tmp_path / "output")
+    assert not (tmp_path / "output").exists()
+
+
+@pytest.mark.integration
+def test_unsafe_batch_identifier_is_rejected(tmp_path: Path) -> None:
+    batch = generate_scenario("healthy", tmp_path / "input")
+    manifest_path = batch / "manifest.json"
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    manifest["batch_id"] = "../outside"
+    manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+
+    with pytest.raises(ValueError, match="batch_id"):
+        process_batch(batch, tmp_path / "output")
+
+
+@pytest.mark.integration
+def test_source_schema_mismatch_is_rejected_before_publication(tmp_path: Path) -> None:
+    batch = generate_scenario("healthy", tmp_path / "input")
+    invoices_path = batch / "invoices.csv"
+    lines = invoices_path.read_text(encoding="utf-8").splitlines()
+    lines[0] = lines[0].replace("invoice_id", "unexpected_id", 1)
+    invoices_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    refresh_manifest(batch)
+
+    with pytest.raises(ValueError, match="Schema mismatch"):
+        process_batch(batch, tmp_path / "output")
+
+
+@pytest.mark.integration
+def test_manifest_row_count_mismatch_is_rejected_before_publication(tmp_path: Path) -> None:
+    batch = generate_scenario("healthy", tmp_path / "input")
+    manifest_path = batch / "manifest.json"
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    manifest["datasets"]["routes"] += 1
+    manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+
+    with pytest.raises(ValueError, match="Manifest count mismatch"):
+        process_batch(batch, tmp_path / "output")
+
+
+@pytest.mark.integration
 def test_healthy_pipeline_and_unchanged_rerun_are_idempotent(tmp_path: Path) -> None:
     batch = generate_scenario("healthy", tmp_path / "input")
     output = tmp_path / "output"

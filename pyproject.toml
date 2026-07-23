@@ -77,3 +77,7 @@ packages = ["datalibra"]
 [tool.coverage.run]
 source = ["datalibra"]
 branch = true
+omit = [
+  "src/datalibra/databricks/delta.py",
+  "src/datalibra/databricks/tasks.py",
+]

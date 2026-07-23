@@ -11,6 +11,7 @@ from typing import Any
 from datalibra import PIPELINE_VERSION
 from datalibra.config import ProjectConfig, load_project_config
 from datalibra.domain.normalization import decimal_string, parse_decimal
+from datalibra.quality.rules import RULE_DATASETS
 from datalibra.storage.local import LocalCsvStorage, write_csv_atomic, write_json_atomic
 
 GOLD_FIELDS: dict[str, tuple[str, ...]] = {
@@ -317,7 +318,7 @@ def build_gold_outputs(
             "affected_financial_amount_eur": row["affected_financial_amount_eur"],
         }
         for row in sorted(
-            quality_rows,
+            (row for row in quality_rows if row["rule_name"] in RULE_DATASETS),
             key=lambda item: (
                 item["batch_id"],
                 item["affected_dataset"],

@@ -82,8 +82,14 @@ def standardize_batch(frames: Mapping[str, Any]) -> tuple[dict[str, Any], dict[s
         .withColumn("currency_code", _code(F.col("currency_code")))
         .withColumn("decimal_places", _try_cast("decimal_places", "int"))
     )
-    trusted["countries"], quarantine["countries"] = countries, countries.limit(0)
-    trusted["currencies"], quarantine["currencies"] = currencies, currencies.limit(0)
+    trusted["countries"], quarantine["countries"] = (
+        countries,
+        countries.withColumn("_reason_codes", F.lit("").cast("string")).limit(0),
+    )
+    trusted["currencies"], quarantine["currencies"] = (
+        currencies,
+        currencies.withColumn("_reason_codes", F.lit("").cast("string")).limit(0),
+    )
 
     country_refs = countries.select(F.col("country_code").alias("_valid_country")).distinct()
     currency_refs = currencies.select(F.col("currency_code").alias("_valid_currency")).distinct()

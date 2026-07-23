@@ -8,11 +8,22 @@ from pathlib import Path
 from typing import Any
 
 from datalibra.config import load_project_config
-from datalibra.databricks.delta import merge_bronze_evidence, replace_batch, replace_global
+from datalibra.databricks.delta import (
+    merge_bronze_evidence,
+    reject_cross_batch_fact_collision,
+    replace_batch,
+    replace_global,
+    upsert_reference,
+)
 from datalibra.databricks.gold import build_gold_dataframes
 from datalibra.databricks.schemas import source_schema
 from datalibra.databricks.transforms import quality_results, standardize_batch
-from datalibra.domain.contracts import DATASET_ORDER, SOURCE_FIELDS, source_fingerprint
+from datalibra.domain.contracts import (
+    DATASET_ORDER,
+    FACT_DATASETS,
+    SOURCE_FIELDS,
+    source_fingerprint,
+)
 
 
 def _arguments() -> argparse.Namespace:
@@ -130,14 +141,30 @@ def build_silver() -> None:
     }
     trusted, quarantine = standardize_batch(bronze)
     keys = load_project_config().dataset_keys
-    for dataset in DATASET_ORDER:
-        replace_batch(
+    for dataset in FACT_DATASETS:
+        reject_cross_batch_fact_collision(
             spark,
             trusted[dataset],
             _table(args.catalog, args.schema, "silver", dataset),
             batch_id=args.batch_id,
             business_key=keys[dataset],
         )
+    for dataset in DATASET_ORDER:
+        if dataset in FACT_DATASETS:
+            replace_batch(
+                spark,
+                trusted[dataset],
+                _table(args.catalog, args.schema, "silver", dataset),
+                batch_id=args.batch_id,
+                business_key=keys[dataset],
+            )
+        else:
+            upsert_reference(
+                spark,
+                trusted[dataset],
+                _table(args.catalog, args.schema, "silver", dataset),
+                business_key=keys[dataset],
+            )
         replace_batch(
             spark,
             quarantine[dataset],
@@ -203,7 +230,7 @@ def build_gold_and_validate() -> None:
     )
     replace_global(
         control_frame,
-        f"{args.catalog}.{args.schema}.gold_reconciliation",
+        f"{args.catalog}.{args.schema}.reconciliation_controls",
     )
     if not all(item[3] for item in controls):
         raise ValueError("Databricks Gold totals do not reconcile to trusted Silver")

@@ -26,7 +26,7 @@ def test_healthy_gold_contracts_reconcile_to_trusted_silver(tmp_path: Path) -> N
     assert controls["gold_row_counts"] == {
         "gold_budget_vs_actual": 120,
         "gold_customer_profitability": 240,
-        "gold_data_quality_summary": 52,
+        "gold_data_quality_summary": 38,
         "gold_monthly_country_finance": 60,
         "gold_route_profitability": 120,
     }
