@@ -9,7 +9,7 @@ import pytest
 from datalibra.domain.errors import ArtifactIntegrityError
 from datalibra.generators import generate_scenario
 from datalibra.silver import process_batch
-from datalibra.storage.local import LocalCsvStorage
+from datalibra.storage.local import LocalCsvStorage, write_csv_atomic
 from tests.helpers import read_rows, refresh_manifest, write_rows
 
 
@@ -104,6 +104,46 @@ def test_unrelated_batch_refuses_to_bless_damaged_prior_evidence(tmp_path: Path)
 
     assert (output / "state" / "processed_batches.json").read_bytes() == state_before
     assert (output / "silver" / "invoices.csv").read_bytes() == silver_before
+
+
+@pytest.mark.integration
+@pytest.mark.parametrize(
+    "artifact",
+    ["silver", "quarantine", "quality", "reconciliation", "summary"],
+)
+def test_noop_replay_repairs_altered_attested_evidence(tmp_path: Path, artifact: str) -> None:
+    scenario = "duplicate_invoices" if artifact == "quarantine" else "healthy"
+    batch = generate_scenario(scenario, tmp_path / "input")
+    output = tmp_path / "output"
+    process_batch(batch, output)
+
+    if artifact == "silver":
+        path = output / "silver" / "invoices.csv"
+        rows = read_rows(path)
+        rows[0]["amount_eur"] = "999999.99"
+        write_csv_atomic(path, rows)
+    elif artifact == "quarantine":
+        path = output / "quarantine" / "invoices.csv"
+        rows = read_rows(path)
+        rows[0]["_reason_codes"] = "FORGED_REASON"
+        write_csv_atomic(path, rows)
+    elif artifact == "quality":
+        path = output / "quality" / "quality_results.csv"
+        rows = read_rows(path)
+        rows[0]["validation_status"] = "FAIL"
+        write_csv_atomic(path, rows)
+    else:
+        folder = "reconciliation" if artifact == "reconciliation" else "runs"
+        path = output / folder / f"slice001-{scenario}.json"
+        value = json.loads(path.read_text(encoding="utf-8"))
+        value["forged"] = True
+        path.write_text(json.dumps(value, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+
+    rebuilt = process_batch(batch, output)
+
+    assert rebuilt.status == ("quality_failed" if scenario == "duplicate_invoices" else "success")
+    if artifact in {"reconciliation", "summary"}:
+        assert "forged" not in json.loads(path.read_text(encoding="utf-8"))
 
 
 class EvidenceFaultStorage(LocalCsvStorage):

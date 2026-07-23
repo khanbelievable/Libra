@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import json
 from decimal import Decimal
 from pathlib import Path
@@ -117,3 +118,23 @@ def test_completely_absent_country_partition_still_fails_volume_rule(tmp_path: P
     assert "INVOICE_COUNTRY_VOLUME" in summary.failed_rules
     assert volume["validation_status"] == "FAIL"
     assert volume["failed_row_count"] == "0"
+
+
+@pytest.mark.integration
+def test_independent_healthy_outputs_are_byte_identical(tmp_path: Path) -> None:
+    first_batch = generate_scenario("healthy", tmp_path / "input-a")
+    second_batch = generate_scenario("healthy", tmp_path / "input-b")
+    first_output = tmp_path / "output-a"
+    second_output = tmp_path / "output-b"
+
+    process_batch(first_batch, first_output)
+    process_batch(second_batch, second_output)
+
+    def tree_digest(root: Path) -> str:
+        digest = hashlib.sha256()
+        for path in sorted(item for item in root.rglob("*") if item.is_file()):
+            digest.update(path.relative_to(root).as_posix().encode())
+            digest.update(path.read_bytes())
+        return digest.hexdigest()
+
+    assert tree_digest(first_output) == tree_digest(second_output)
