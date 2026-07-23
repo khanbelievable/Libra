@@ -6,7 +6,7 @@ Libra is developed in small vertical slices. A change should leave behind execut
 
 ```bash
 python -m venv .venv
-python -m pip install -e ".[dev]"
+python -m pip install -e ".[dev,spark]"
 ```
 
 Activate `.venv` using the command appropriate for your shell, then run:
@@ -33,6 +33,8 @@ python -m pip check
 - Keep cloud SDK imports behind adapters so local tests need no credentials.
 - Update the relevant ADR, quality rule, KPI definition, or data model when behavior changes.
 - Add unit coverage for rules and integration/demo evidence for business outcomes.
+- For Spark changes, compare financial control totals to the deterministic local Gold oracle.
+- For bundle changes, preserve the three-task job boundary and never commit workspace credentials.
 
 Generated data, credentials, local environments, and processing output must not be committed.
 

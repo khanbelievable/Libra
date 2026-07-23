@@ -42,3 +42,18 @@
 ## Evidence
 
 Automated acceptance evidence is in `tests/demo`. Human-readable values and commands are in `demo/expected-results/SLICE_001.md`. The completed implementation review is recorded in `docs/SLICE_001_REVIEW.md`.
+
+## Milestone 1
+
+- Every shipment has a valid route and finite positive volume.
+- Healthy data contains exactly four operational-cost categories and trusted costs reconcile in EUR.
+- Invalid cost amount, type, currency, FX, country, route, shipment, or cost center is quarantined.
+- Monthly country, route, customer, budget-versus-actual, and data-quality Gold contracts have
+  explicit deterministic schemas and reconcile to Silver.
+- Direct shipment allocation satisfies `revenue - allocated cost = gross profit`.
+- The correction demonstration changes January 2025 history without duplicate invoice or cost IDs
+  and preserves batch arrival sequence.
+- Local PySpark contracts use DecimalType and reproduce local financial controls.
+- The Databricks bundle contains one three-task job and no credentials.
+- Cloud validation, deployment, job execution, Delta inspection, and local/cloud comparison are
+  reported independently; unavailable authentication is never presented as a successful run.

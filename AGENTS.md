@@ -1,7 +1,7 @@
 # Engineering Guide
 
-Libra is delivered as reviewable vertical slices. Keep changes inside the active backlog
-item and leave the repository runnable after each commit.
+Libra is delivered through the final three-milestone plan. Keep changes inside the active
+milestone and leave the repository runnable after each commit.
 
 ## Working agreement
 
@@ -18,7 +18,11 @@ item and leave the repository runnable after each commit.
 - Preserve canonical values in internal CSVs. Spreadsheet neutralization is permitted only at an
   explicit export boundary whose output cannot re-enter processing.
 - Keep the local adapter dependency-free and single-writer. Cloud adapters are separate
-  backlog work and must not be represented as deployed before executable evidence exists.
+  execution paths and must not be represented as deployed before executable evidence exists.
+- Treat the local Gold result as the financial oracle for Spark/Delta parity. Route/customer
+  cost allocation is direct through shipment; do not add unapproved shared allocation logic.
+- Keep Databricks credentials out of source. Record bundle validation, deployment, run, and Delta
+  inspection as separate statuses.
 - Use Conventional Commits and keep each commit logically complete.
 
 ## Required verification

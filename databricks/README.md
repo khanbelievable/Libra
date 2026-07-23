@@ -1,14 +1,22 @@
-# Databricks interface — not deployed in Slice 001
+# Databricks Delta implementation
 
-Databricks is the approved production transformation plane. Slice 001 intentionally ships no pretend notebook outputs or unverified workspace deployment. The local `PipelineStorage` protocol and domain contract define the behavior the Delta adapter must preserve.
+Milestone 1 includes an executable PySpark/Delta path and a Databricks Declarative Automation
+Bundle. The local Python pipeline remains the deterministic financial oracle.
 
-The next Databricks slice will provide:
+The bundle deploys one job with three wheel tasks:
 
-- Auto Loader or batch landing into append-only Bronze Delta tables with `_batch_id`, source path/row, ingestion timestamp, and payload fingerprint.
-- PySpark DataFrame standardization equivalent to the local rules, using explicit schemas and `DecimalType`.
-- Silver Delta `MERGE` keyed by the keys in `config/datasets/slice_001.json`.
-- Quarantine and quality-result Delta tables with the stable reason codes in `docs/DATA_QUALITY_RULES.md`.
-- Gold finance exports conforming to `databricks/sql/GOLD_EXPORT_CONTRACT.sql`.
-- Asset Bundle validation and a real workspace smoke run before the adapter is called complete.
+1. `land_bronze` validates the source manifest and idempotently appends immutable batch/fingerprint
+   evidence to Bronze Delta tables.
+2. `build_silver` applies explicit schemas, identifier/date standardization, DecimalType finance
+   casts, FX conversion, referential checks, cost quarantine, and batch-owned Delta MERGE.
+3. `build_gold_and_validate` publishes the five Gold Delta contracts and an audit reconciliation
+   table;
+   the task fails if revenue or operational cost differs from trusted Silver.
 
-This boundary is intentional: local tests require neither Java nor a Databricks credential, and cloud-specific imports must remain lazy.
+Conformed reference tables use global natural keys. Financial fact merges replace only the current
+batch contribution. A natural key already owned by another batch fails closed before fact
+publication; the local claim engine remains the richer cross-batch invoice oracle.
+
+Deployment, inspection, correction, and cleanup commands are in
+[`docs/DATABRICKS_RUNBOOK.md`](../docs/DATABRICKS_RUNBOOK.md). Actual workspace status and control
+totals are recorded in [`docs/MILESTONE_1_VALIDATION.md`](../docs/MILESTONE_1_VALIDATION.md).

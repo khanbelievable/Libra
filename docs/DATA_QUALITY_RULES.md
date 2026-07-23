@@ -7,7 +7,8 @@
 | Conflicting invoice claim | `CONFLICTING_DUPLICATE_INVOICE` | invoices | Withhold every occurrence until an owning batch is corrected | error |
 | Cross-batch fact replay | `CROSS_BATCH_RECORD_OWNERSHIP` | shipments/budgets | Preserve the first owner and quarantine an exact later replay | warning |
 | Required customer | `MISSING_CUSTOMER_ID` | shipments/invoices | Quarantine row | error |
-| Required cost center | `MISSING_COST_CENTER_ID` | shipments/invoices/budgets | Quarantine row | error |
+| Required cost center | `MISSING_COST_CENTER_ID` | shipments/invoices/budgets/operational costs | Quarantine row | error |
+| Required route/shipment | `MISSING_ROUTE_ID` / `MISSING_SHIPMENT_ID` | shipments/operational costs | Quarantine row | error |
 | Finite financial value | `INVALID_FINANCIAL_VALUE` | monetary facts | Reject malformed, non-finite, or forbidden negative values | error |
 | Valid exchange rate | `INVALID_EXCHANGE_RATE` / `INVALID_EXCHANGE_RATE_REFERENCE` | FX/facts | Rate must be finite and greater than zero; withhold dependent facts | error |
 | Exchange-rate uniqueness | `DUPLICATE_EXCHANGE_RATE` / `CONFLICTING_EXCHANGE_RATE` / `CONFLICTING_EXCHANGE_RATE_REFERENCE` | FX/facts | Deduplicate one exact rate; withhold a contested rate key and dependents | error |
@@ -17,7 +18,10 @@
 | Currency reference | `UNKNOWN_CURRENCY_CODE` | dimensions/facts | Quarantine row | error |
 | Customer reference | `UNKNOWN_CUSTOMER_ID` | shipments/invoices | Quarantine row | error |
 | Cost-center reference | `UNKNOWN_COST_CENTER_ID` | facts | Quarantine row | error |
-| Shipment reference | `UNKNOWN_SHIPMENT_ID` | invoices | Quarantine row | error |
+| Shipment reference | `UNKNOWN_SHIPMENT_ID` | invoices/operational costs | Quarantine row | error |
+| Route reference | `UNKNOWN_ROUTE_ID` | shipments/operational costs | Quarantine row | error |
+| Operational-cost type | `INVALID_COST_TYPE` | operational costs | Only FUEL, LABOR, WAREHOUSING, or TRANSPORT is trusted | error |
+| Shipment volume | `INVALID_SHIPMENT_VOLUME` | shipments | Volume must be finite and greater than zero | error |
 | Row reconciliation | `COMMITTED_READBACK_MISMATCH` | all | Committed batch counts, business keys, and quarantine evidence must match expected publication | error |
 | Financial reconciliation | `COMMITTED_FINANCIAL_MISMATCH` | monetary facts | Committed batch and global EUR totals must match expected totals | error |
 
@@ -38,7 +42,7 @@ quarantine. The batch remains visible in quality history but does not advance th
 timestamp. Direct consumers of local Silver must therefore apply the processed-state refresh gate;
 the future Delta adapter will provide transactional release semantics.
 
-Cross-batch shipment and budget payloads are normalized before comparison. An exact repeat emits
+Cross-batch shipment, budget, and operational-cost payloads are normalized before comparison. An exact repeat emits
 noncritical ownership evidence and leaves the first contribution unchanged. A conflicting
 monetary payload raises `CrossBatchCollisionError`; it is an execution failure, not a row-quality
 result, because Slice 001.2 does not define a generalized non-invoice correction policy.

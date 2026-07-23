@@ -2,7 +2,10 @@
 
 ## Narrative
 
-A finance analyst receives the complete 2025 regional delivery and proves trusted EUR revenue. Three subsequent demonstrations show how Libra handles a resent invoice, a missing March GBP-rate partition, and a Germany invoice file containing roughly 30% of expected volume.
+A finance analyst receives the complete 2025 regional delivery and proves trusted EUR revenue,
+operational cost, route/customer profitability, and budget variance. Controlled demonstrations
+cover resent invoices, missing GBP rates, incomplete Germany delivery, invalid costs, and one
+historical cost correction.
 
 ## Run
 
@@ -11,6 +14,8 @@ libra generate healthy --output data/generated
 libra run healthy --input data/generated --output data/processed
 libra generate broken --output data/generated
 libra run broken --input data/generated --output data/processed
+libra generate correction --output data/generated
+libra run correction --input data/generated --output data/processed
 pytest tests/demo -q
 ```
 
@@ -20,6 +25,7 @@ The broken command intentionally returns exit code 2 after writing controlled re
 libra run-batch --batch-dir data/generated/duplicate_invoices --output data/processed/duplicate_invoices
 libra run-batch --batch-dir data/generated/missing_gbp_fx --output data/processed/missing_gbp_fx
 libra run-batch --batch-dir data/generated/incomplete_germany --output data/processed/incomplete_germany
+libra run-batch --batch-dir data/generated/invalid_operational_costs --output data/processed/invalid_operational_costs
 ```
 
 ## Talking points
@@ -30,6 +36,8 @@ libra run-batch --batch-dir data/generated/incomplete_germany --output data/proc
 4. Show quarantined rows and stable reason codes.
 5. Show PASS and FAIL rule rows, not just logs.
 6. Re-run healthy and demonstrate `already_processed` with unchanged totals.
-7. Explain why Databricks transforms once, Snowflake governs/serves, and Power BI calculates presentation measures.
+7. Reconcile all five Gold contracts to Silver revenue, cost, and budget controls.
+8. Show the correction before/after audit and unchanged owner sequence.
+9. Explain the three-task Delta job and distinguish local, validated, deployed, and executed status.
 
 Exact deterministic counts and totals are generated into each run summary and asserted in `tests/demo`; see `demo/expected-results/SLICE_001.md`.

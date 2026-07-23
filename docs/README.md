@@ -15,6 +15,11 @@
 
 ## Delivery
 
+- [Milestone 1 validation](MILESTONE_1_VALIDATION.md) — local gates, cloud status, Gold controls,
+  and correction evidence.
+- [Databricks runbook](DATABRICKS_RUNBOOK.md) — authentication, bundle commands, Delta inspection,
+  recovery, and teardown.
+- [Future work](FUTURE_WORK.md) — explicit non-blocking limitations and remaining milestones.
 - [Acceptance criteria](ACCEPTANCE_CRITERIA.md) — executable definition of done.
 - [Demo scenario](DEMO_SCENARIO.md) — commands and interview walkthrough.
 - [Backlog](BACKLOG.md) — vertical slices, dependencies, tests, and evidence.
@@ -35,3 +40,4 @@
 - [ADR-002: Medallion architecture](adr/ADR-002-medallion-architecture.md)
 - [ADR-003: Idempotent processing](adr/ADR-003-idempotent-processing.md)
 - [ADR-004: Local and cloud adapters](adr/ADR-004-local-and-cloud-adapters.md)
+- [ADR-005: Milestone 1 analytics and Delta](adr/ADR-005-milestone-1-analytics-and-delta.md)

@@ -2,7 +2,11 @@
 
 ## Summary
 
-Regional files are landed as batch-addressed source data. Databricks is the future production compute plane: it incrementally captures Bronze evidence, applies domain rules once in Silver, and creates finance aggregates in Gold. Snowflake receives governed, already-conformed facts and dimensions and owns access-controlled reporting marts/views. Power BI owns semantic relationships, reusable DAX measures, and user navigation. Slice 001 uses a local filesystem adapter with the same batch and domain contracts.
+Regional files are landed as batch-addressed source data. Milestone 1 implements two execution
+paths: a deterministic local oracle and a deployable PySpark/Delta Databricks path. Both capture
+Bronze evidence, standardize and validate Silver, convert transaction currency to EUR, and produce
+five reconciled Gold contracts. Snowflake and Power BI remain Milestone 2 interface specifications,
+not deployed components.
 
 ## System context
 
@@ -36,7 +40,7 @@ flowchart LR
     Standardize --> Validate["Validate DQ and references"]
     Validate -->|valid| Silver["Silver\nconformed, EUR-normalized"]
     Validate -->|invalid| Quarantine["Quarantine\nrow + reason codes"]
-    Silver --> Gold["Gold\nfinance aggregates"]
+    Silver --> Gold["Gold\ncountry, route, customer,\nbudget, and DQ analytics"]
     Validate --> Results["Quality results"]
     Silver --> Recon["Reconciliation"]
 ```
@@ -81,7 +85,21 @@ flowchart TD
 
 ## Local-to-cloud compatibility
 
-The domain layer works on typed row mappings and produces explicit valid rows, quarantined rows, and rule outcomes. Local CSV storage is an adapter. The production PySpark adapter will express the same rules as DataFrame transformations and Delta merges; it must pass the same contract fixtures. This avoids requiring Java/Spark for a basic portfolio demonstration while keeping cloud logic isolated.
+The local domain layer produces explicit trusted rows, quarantine, quality, reconciliation, and
+Gold controls. The implemented PySpark path uses explicit source schemas, DateType, DecimalType,
+DataFrame validation/FX transformations, and Delta tables. Local Spark contracts compare cloud
+transform totals to the local oracle.
+
+Databricks Bronze MERGE is idempotent by batch, fingerprint, and deterministic source row. Global
+reference tables merge by natural key. Financial facts preflight natural-key ownership and then
+transactionally replace only the current batch contribution. A cross-batch fact collision fails
+closed; richer invoice claim resolution remains in the local trust core and is recorded in
+`docs/FUTURE_WORK.md`.
+
+The Declarative Automation Bundle deploys one job with three tasks:
+`land_bronze`, `build_silver`, and `build_gold_and_validate`. Gold is replaced only after Silver
+finishes, and the final task writes the non-Gold `reconciliation_controls` Delta audit table
+before reporting success.
 
 ## Operational semantics
 
@@ -106,11 +124,15 @@ The domain layer works on typed row mappings and produces explicit valid rows, q
   advance. Local direct consumers must honor state.
 - Internal CSVs retain canonical values exactly. Spreadsheet formula neutralization is an
   explicit presentation/export operation whose output is never read as canonical storage.
-- Shipment and budget exact cross-batch repeats retain the existing owner and write noncritical
+- Shipment, budget, and operational-cost exact cross-batch repeats retain the existing owner and write noncritical
   evidence; conflicting monetary payloads fail closed. Dimensions and FX references do not have
   generalized claim ownership in Slice 001.2 and remain a documented limitation.
 - Publication order is: verify active attestations; Bronze; inflight recovery marker; batch claim
   manifest; aggregate claims index; Silver/quarantine; committed reconciliation; quality;
   reconciliation JSON; summary; processed state last. The marker never represents success and is
   cleared after state. An exact retry converges at every boundary.
+- Every operational cost is directly linked to a shipment, route, and cost center. Route and
+  customer Gold allocation is therefore direct rather than estimated.
+- FX impact compares transaction-date translation to the first available same-currency rate in
+  that calendar month; revenue variance less cost variance is reported by month/country.
 - Timestamps used in generated demo evidence come from deterministic batch metadata. A production adapter uses the orchestrator's UTC execution timestamp.

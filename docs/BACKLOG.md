@@ -2,6 +2,18 @@
 
 Status values: `DONE`, `IN PROGRESS`, `PLANNED`.
 
+## Final delivery milestones
+
+1. **Milestone 1 — Business analytics + real Databricks execution:** local implementation and
+   Spark parity are DONE; authenticated bundle validation/deploy/run and Delta inspection are
+   pending workspace access.
+2. **Milestone 2 — Snowflake + Power BI:** PLANNED and must not begin until Milestone 1 cloud
+   evidence is complete.
+3. **Milestone 3 — Final packaging and release:** PLANNED.
+
+The older LIBRA items below retain design history; Milestone 1 combines the relevant parts of
+LIBRA-002, a focused LIBRA-003 demonstration, and LIBRA-004.
+
 ## LIBRA-001 — Trusted EUR invoice slice
 
 - **Goal:** Generate 12 months of source data and process healthy/failure batches from Bronze to Silver with quarantine.
@@ -56,7 +68,7 @@ Status values: `DONE`, `IN PROGRESS`, `PLANNED`.
 - **Required tests:** cost allocation, negative/credit handling, route joins, aggregate reconciliation.
 - **Demo evidence:** route and customer profitability extracts.
 - **Dependencies:** LIBRA-001.2 and reviewer approval to proceed.
-- **Completion status:** PLANNED (review gate not yet cleared).
+- **Completion status:** DONE in Milestone 1 local and Spark implementations.
 
 ## LIBRA-003 — Late arrival and correction lifecycle
 
@@ -67,7 +79,8 @@ Status values: `DONE`, `IN PROGRESS`, `PLANNED`.
 - **Required tests:** replay, changed fingerprint, period restatement, unchanged re-run.
 - **Demo evidence:** before/after monthly totals and correction audit.
 - **Dependencies:** LIBRA-001.
-- **Completion status:** PLANNED.
+- **Completion status:** Focused cost-correction demonstration DONE in Milestone 1; a generalized
+  accounting-restatement lifecycle remains future work.
 
 ## LIBRA-004 — Databricks/Delta production adapter
 
@@ -78,7 +91,8 @@ Status values: `DONE`, `IN PROGRESS`, `PLANNED`.
 - **Required tests:** local Spark tests and cloud smoke/job tests.
 - **Demo evidence:** bundle validation, job run, Delta history.
 - **Dependencies:** LIBRA-001 through LIBRA-003.
-- **Completion status:** PLANNED.
+- **Completion status:** IN PROGRESS — executable adapter, Spark contracts, and bundle are
+  implemented; authenticated workspace validation, deployment, execution, and inspection remain.
 
 ## LIBRA-005 — Snowflake governed serving layer
 
