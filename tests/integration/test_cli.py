@@ -80,9 +80,16 @@ def test_cli_broken_workflow_returns_controlled_quality_exit(
         "quality_failed",
         "quality_failed",
         "quality_failed",
+        "quality_failed",
     ]
     assert [run["failed_rules"] for run in result["runs"]] == [
         ["DUPLICATE_INVOICE"],
         ["EXCHANGE_RATE_EXISTS"],
         ["INVOICE_COUNTRY_VOLUME"],
+        [
+            "EXCHANGE_RATE_EXISTS",
+            "FINITE_FINANCIAL_VALUES",
+            "REFERENTIAL_INTEGRITY",
+            "VALID_COST_TYPE",
+        ],
     ]

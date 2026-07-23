@@ -1,4 +1,4 @@
-"""Implementation-independent dataset and content contracts for Slice 001."""
+"""Implementation-independent dataset and content contracts for Milestone 1."""
 
 from __future__ import annotations
 
@@ -14,12 +14,16 @@ DATASET_ORDER = (
     "exchange_rates",
     "customers",
     "cost_centers",
+    "routes",
     "shipments",
     "invoices",
     "budgets",
+    "operational_costs",
 )
 
-DATA_CONTRACT_VERSION = "1.2"
+DATA_CONTRACT_VERSION = "2.0"
+
+COST_TYPES = ("FUEL", "LABOR", "WAREHOUSING", "TRANSPORT")
 
 SOURCE_FIELDS = {
     "countries": ("country_code", "country_name", "default_currency"),
@@ -27,9 +31,19 @@ SOURCE_FIELDS = {
     "exchange_rates": ("rate_date", "currency_code", "rate_to_eur"),
     "customers": ("customer_id", "customer_name", "country_code"),
     "cost_centers": ("cost_center_id", "cost_center_name", "country_code"),
+    "routes": (
+        "route_id",
+        "origin_country_code",
+        "destination_country_code",
+        "transport_mode",
+        "distance_km",
+        "standard_transit_days",
+    ),
     "shipments": (
         "shipment_id",
         "shipment_date",
+        "route_id",
+        "volume_m3",
         "country_code",
         "customer_id",
         "cost_center_id",
@@ -48,23 +62,37 @@ SOURCE_FIELDS = {
         "source_updated_at",
     ),
     "budgets": ("month_start", "cost_center_id", "currency_code", "budget_amount"),
+    "operational_costs": (
+        "cost_id",
+        "shipment_id",
+        "route_id",
+        "cost_center_id",
+        "country_code",
+        "posting_date",
+        "cost_type",
+        "amount",
+        "currency_code",
+    ),
 }
 
-FACT_DATASETS = ("shipments", "invoices", "budgets")
+FACT_DATASETS = ("shipments", "invoices", "budgets", "operational_costs")
 MONETARY_FIELD = {
     "shipments": "revenue_amount",
     "invoices": "revenue_amount",
     "budgets": "budget_amount",
+    "operational_costs": "amount",
 }
 DATE_FIELD = {
     "shipments": "shipment_date",
     "invoices": "invoice_date",
     "budgets": "month_start",
+    "operational_costs": "posting_date",
 }
 IDENTIFIER_FIELDS = {
-    "shipments": ("shipment_id", "customer_id", "cost_center_id"),
+    "shipments": ("shipment_id", "route_id", "customer_id", "cost_center_id"),
     "invoices": ("invoice_id", "shipment_id", "customer_id", "cost_center_id"),
     "budgets": ("cost_center_id",),
+    "operational_costs": ("cost_id", "shipment_id", "route_id", "cost_center_id"),
 }
 
 INVOICE_BUSINESS_KEY = ("invoice_id",)

@@ -39,6 +39,7 @@ def test_exact_non_invoice_financial_replay_retains_first_owner(tmp_path: Path) 
 
     shipments = read_rows(output / "silver" / "shipments.csv")
     budgets = read_rows(output / "silver" / "budgets.csv")
+    costs = read_rows(output / "silver" / "operational_costs.csv")
     quarantined_shipments = [
         row
         for row in read_rows(output / "quarantine" / "shipments.csv")
@@ -49,11 +50,18 @@ def test_exact_non_invoice_financial_replay_retains_first_owner(tmp_path: Path) 
         for row in read_rows(output / "quarantine" / "budgets.csv")
         if row["_batch_id"] == "second"
     ]
+    quarantined_costs = [
+        row
+        for row in read_rows(output / "quarantine" / "operational_costs.csv")
+        if row["_batch_id"] == "second"
+    ]
     assert summary.status == "success"
     assert {row["_batch_id"] for row in shipments} == {"slice001-healthy"}
     assert {row["_batch_id"] for row in budgets} == {"slice001-healthy"}
+    assert {row["_batch_id"] for row in costs} == {"slice001-healthy"}
     assert len(quarantined_shipments) == 720
     assert len(quarantined_budgets) == 120
+    assert len(quarantined_costs) == 2880
     assert {row["_reason_codes"] for row in quarantined_shipments} == {
         "CROSS_BATCH_DUPLICATE_RECORD"
     }
@@ -62,7 +70,11 @@ def test_exact_non_invoice_financial_replay_retains_first_owner(tmp_path: Path) 
 @pytest.mark.integration
 @pytest.mark.parametrize(
     ("dataset", "amount_field"),
-    [("shipments", "revenue_amount"), ("budgets", "budget_amount")],
+    [
+        ("shipments", "revenue_amount"),
+        ("budgets", "budget_amount"),
+        ("operational_costs", "amount"),
+    ],
 )
 def test_conflicting_non_invoice_financial_collision_fails_before_overwrite(
     tmp_path: Path, dataset: str, amount_field: str

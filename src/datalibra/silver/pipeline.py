@@ -15,6 +15,7 @@ from typing import Any
 from datalibra import PIPELINE_VERSION
 from datalibra.config import ProjectConfig, load_project_config
 from datalibra.domain.contracts import (
+    COST_TYPES,
     DATA_CONTRACT_VERSION,
     DATE_FIELD,
     FACT_DATASETS,
@@ -118,7 +119,7 @@ def _standardize_dimension(dataset: str, row: dict[str, str]) -> tuple[dict[str,
         result["currency_code"] = normalize_code(result["currency_code"])
     if "default_currency" in result:
         result["default_currency"] = normalize_code(result["default_currency"])
-    for identifier in ("customer_id", "cost_center_id"):
+    for identifier in ("customer_id", "cost_center_id", "route_id"):
         if identifier in result:
             result[identifier] = normalize_identifier(result[identifier])
     if dataset == "exchange_rates":
@@ -131,6 +132,23 @@ def _standardize_dimension(dataset: str, row: dict[str, str]) -> tuple[dict[str,
         except ValueError:
             reasons.append("INVALID_EXCHANGE_RATE")
             result["rate_to_eur"] = ""
+    elif dataset == "routes":
+        result["origin_country_code"] = normalize_country(result["origin_country_code"])
+        result["destination_country_code"] = normalize_country(
+            result["destination_country_code"]
+        )
+        result["transport_mode"] = normalize_code(result["transport_mode"])
+        try:
+            distance = parse_decimal(result["distance_km"])
+            transit_days = parse_decimal(result["standard_transit_days"])
+            if distance <= 0 or transit_days <= 0 or transit_days != transit_days.to_integral():
+                raise ValueError("Route distance and transit days must be positive")
+            result["distance_km"] = decimal_string(distance, Decimal("0.01"))
+            result["standard_transit_days"] = str(int(transit_days))
+        except ValueError:
+            reasons.append("INVALID_ROUTE_DEFINITION")
+            result["distance_km"] = ""
+            result["standard_transit_days"] = ""
     return result, reasons
 
 
@@ -154,6 +172,19 @@ def _standardize_fact(
     except ValueError:
         reasons.append("INVALID_FINANCIAL_VALUE")
         result[money_field] = ""
+    if dataset == "shipments":
+        try:
+            volume = parse_decimal(result["volume_m3"])
+            if volume <= 0:
+                raise ValueError("Shipment volume must be positive")
+            result["volume_m3"] = decimal_string(volume, Decimal("0.01"))
+        except ValueError:
+            reasons.append("INVALID_SHIPMENT_VOLUME")
+            result["volume_m3"] = ""
+    elif dataset == "operational_costs":
+        result["cost_type"] = normalize_code(result["cost_type"])
+        if result["cost_type"] not in COST_TYPES:
+            reasons.append("INVALID_COST_TYPE")
     return result, reasons
 
 
@@ -451,7 +482,7 @@ def _protect_non_invoice_financial_ownership(
 ) -> None:
     """Retain first owner for exact facts and reject unsupported conflicts."""
 
-    for dataset in ("shipments", "budgets"):
+    for dataset in ("shipments", "budgets", "operational_costs"):
         business_key = dataset_keys[dataset]
         existing_by_key = {
             tuple(row[field] for field in business_key): row
@@ -637,6 +668,12 @@ def process_batch(
         for index, row in enumerate(standardized[dataset]):
             if row["country_code"] not in country_codes:
                 reasons_by_dataset[dataset][index].append("UNKNOWN_COUNTRY_CODE")
+    for index, row in enumerate(standardized["routes"]):
+        if (
+            row["origin_country_code"] not in country_codes
+            or row["destination_country_code"] not in country_codes
+        ):
+            reasons_by_dataset["routes"][index].append("UNKNOWN_COUNTRY_CODE")
     for index, row in enumerate(standardized["exchange_rates"]):
         if row["currency_code"] not in currency_codes:
             reasons_by_dataset["exchange_rates"][index].append("UNKNOWN_CURRENCY_CODE")
@@ -680,6 +717,13 @@ def process_batch(
         if not reasons
     }
     shipment_ids = {row["shipment_id"] for row in standardized["shipments"]}
+    route_ids = {
+        row["route_id"]
+        for row, reasons in zip(
+            standardized["routes"], reasons_by_dataset["routes"], strict=True
+        )
+        if not reasons
+    }
     invalid_rate_keys = {
         (row["rate_date"], row["currency_code"])
         for row, reasons in zip(
@@ -718,6 +762,10 @@ def process_batch(
                 reasons.append("MISSING_CUSTOMER_ID")
             if not row.get("cost_center_id"):
                 reasons.append("MISSING_COST_CENTER_ID")
+            if dataset in ("shipments", "operational_costs") and not row.get("route_id"):
+                reasons.append("MISSING_ROUTE_ID")
+            if dataset == "operational_costs" and not row.get("shipment_id"):
+                reasons.append("MISSING_SHIPMENT_ID")
             if row.get("customer_id") and row["customer_id"] not in customer_ids:
                 reasons.append("UNKNOWN_CUSTOMER_ID")
             if row.get("cost_center_id") and row["cost_center_id"] not in cost_center_ids:
@@ -731,6 +779,13 @@ def process_batch(
                     reasons.append("UNKNOWN_SHIPMENT_ID")
                 if row["country_code"] in dropped_countries:
                     reasons.append("COUNTRY_VOLUME_DROP")
+            if dataset == "shipments" and row["route_id"] not in route_ids:
+                reasons.append("UNKNOWN_ROUTE_ID")
+            if dataset == "operational_costs":
+                if row["shipment_id"] not in shipment_ids:
+                    reasons.append("UNKNOWN_SHIPMENT_ID")
+                if row["route_id"] not in route_ids:
+                    reasons.append("UNKNOWN_ROUTE_ID")
             rate_key = (row[DATE_FIELD[dataset]], row["currency_code"])
             rate = rates.get(rate_key)
             if not row[MONETARY_FIELD[dataset]] or "UNKNOWN_CURRENCY_CODE" in reasons:

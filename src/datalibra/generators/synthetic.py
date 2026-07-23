@@ -12,7 +12,15 @@ from pathlib import Path
 
 from datalibra.domain.contracts import DATASET_ORDER, SOURCE_FIELDS, source_fingerprint
 
-SCENARIOS = ("healthy", "duplicate_invoices", "missing_gbp_fx", "incomplete_germany")
+SCENARIOS = (
+    "healthy",
+    "duplicate_invoices",
+    "missing_gbp_fx",
+    "incomplete_germany",
+    "invalid_operational_costs",
+    "cost_correction_initial",
+    "cost_correction_corrected",
+)
 
 COUNTRIES = (
     ("DE", "Germany", "EUR"),
@@ -22,6 +30,18 @@ COUNTRIES = (
     ("TR", "Türkiye", "TRY"),
 )
 CURRENCIES = (("EUR", "Euro", "2"), ("GBP", "Pound sterling", "2"), ("TRY", "Turkish lira", "2"))
+ROUTES = (
+    ("RTE-DE-NL-ROAD", "DE", "NL", "ROAD", "575.00", "1"),
+    ("RTE-DE-FR-RAIL", "DE", "FR", "RAIL", "880.00", "2"),
+    ("RTE-NL-DE-ROAD", "NL", "DE", "ROAD", "575.00", "1"),
+    ("RTE-NL-GB-SEA", "NL", "GB", "SEA", "520.00", "3"),
+    ("RTE-FR-DE-ROAD", "FR", "DE", "ROAD", "900.00", "2"),
+    ("RTE-FR-NL-RAIL", "FR", "NL", "RAIL", "520.00", "2"),
+    ("RTE-GB-NL-SEA", "GB", "NL", "SEA", "500.00", "3"),
+    ("RTE-GB-FR-ROAD", "GB", "FR", "ROAD", "460.00", "2"),
+    ("RTE-TR-DE-ROAD", "TR", "DE", "ROAD", "2500.00", "5"),
+    ("RTE-TR-NL-SEA", "TR", "NL", "SEA", "2800.00", "8"),
+)
 
 
 def _money(value: Decimal) -> str:
@@ -80,10 +100,57 @@ def build_datasets(seed: int = 20250101) -> dict[str, list[dict[str, str]]]:
                 }
             )
 
+    routes = [
+        {
+            "route_id": route_id,
+            "origin_country_code": origin,
+            "destination_country_code": destination,
+            "transport_mode": mode,
+            "distance_km": distance,
+            "standard_transit_days": transit_days,
+        }
+        for route_id, origin, destination, mode, distance, transit_days in ROUTES
+    ]
+    routes_by_origin: dict[str, list[dict[str, str]]] = {}
+    for route in routes:
+        routes_by_origin.setdefault(route["origin_country_code"], []).append(route)
+
     shipments: list[dict[str, str]] = []
     invoices: list[dict[str, str]] = []
     budgets: list[dict[str, str]] = []
+    operational_costs: list[dict[str, str]] = []
     country_multiplier = {"DE": 1.18, "NL": 1.05, "FR": 1.10, "GB": 0.94, "TR": 18.0}
+    local_currency_factor = {
+        "DE": Decimal("1.00"),
+        "NL": Decimal("1.00"),
+        "FR": Decimal("1.00"),
+        "GB": Decimal("0.86"),
+        "TR": Decimal("35.00"),
+    }
+    warehouse_rate = {
+        "DE": Decimal("6.50"),
+        "NL": Decimal("7.00"),
+        "FR": Decimal("6.00"),
+        "GB": Decimal("7.50"),
+        "TR": Decimal("4.00"),
+    }
+    mode_rates = {
+        "ROAD": {
+            "FUEL": Decimal("0.060"),
+            "TRANSPORT": Decimal("0.120"),
+            "LABOR": Decimal("25.00"),
+        },
+        "RAIL": {
+            "FUEL": Decimal("0.030"),
+            "TRANSPORT": Decimal("0.080"),
+            "LABOR": Decimal("20.00"),
+        },
+        "SEA": {
+            "FUEL": Decimal("0.020"),
+            "TRANSPORT": Decimal("0.060"),
+            "LABOR": Decimal("15.00"),
+        },
+    }
     currency_by_country = {code: currency for code, _, currency in COUNTRIES}
     shipment_sequence = 1
     for month in range(1, 13):
@@ -95,6 +162,10 @@ def build_datasets(seed: int = 20250101) -> dict[str, list[dict[str, str]]]:
                 invoice_date = shipment_date + timedelta(days=5)
                 customer_id = f"CUS-{country_code}-{((local_sequence - 1) % 4) + 1:03d}"
                 cost_center_id = f"CC-{country_code}-{((local_sequence - 1) % 2) + 1:03d}"
+                route = routes_by_origin[country_code][(local_sequence - 1) % 2]
+                route_id = route["route_id"]
+                volume = Decimal("8.00") + Decimal(local_sequence) * Decimal("0.70")
+                volume += Decimal(month % 3) * Decimal("0.40")
                 base = Decimal(850 + 45 * local_sequence + 17 * month + rng.randint(0, 75))
                 local_amount = base * Decimal(str(country_multiplier[country_code]))
                 amount = _money(local_amount)
@@ -109,6 +180,8 @@ def build_datasets(seed: int = 20250101) -> dict[str, list[dict[str, str]]]:
                     {
                         "shipment_id": shipment_id,
                         "shipment_date": shipment_date.isoformat(),
+                        "route_id": route_id,
+                        "volume_m3": _money(volume),
                         **common,
                     }
                 )
@@ -121,6 +194,34 @@ def build_datasets(seed: int = 20250101) -> dict[str, list[dict[str, str]]]:
                         "source_updated_at": f"{invoice_date.isoformat()}T06:00:00Z",
                     }
                 )
+                distance = Decimal(route["distance_km"])
+                transit_days = Decimal(route["standard_transit_days"])
+                mode = route["transport_mode"]
+                volume_factor = Decimal("0.75") + volume / Decimal("20")
+                cost_eur = {
+                    "FUEL": distance * mode_rates[mode]["FUEL"] * volume_factor,
+                    "LABOR": transit_days
+                    * mode_rates[mode]["LABOR"]
+                    * (Decimal("0.80") + volume / Decimal("30")),
+                    "WAREHOUSING": volume * warehouse_rate[country_code],
+                    "TRANSPORT": distance
+                    * mode_rates[mode]["TRANSPORT"]
+                    * (Decimal("0.85") + volume / Decimal("40")),
+                }
+                for cost_type, eur_value in cost_eur.items():
+                    operational_costs.append(
+                        {
+                            "cost_id": f"CST-{shipment_sequence:06d}-{cost_type[:3]}",
+                            "shipment_id": shipment_id,
+                            "route_id": route_id,
+                            "cost_center_id": cost_center_id,
+                            "country_code": country_code,
+                            "posting_date": (shipment_date + timedelta(days=3)).isoformat(),
+                            "cost_type": cost_type,
+                            "amount": _money(eur_value * local_currency_factor[country_code]),
+                            "currency_code": currency,
+                        }
+                    )
                 shipment_sequence += 1
             for cc_number in range(1, 3):
                 cost_center_id = f"CC-{country_code}-{cc_number:03d}"
@@ -141,9 +242,11 @@ def build_datasets(seed: int = 20250101) -> dict[str, list[dict[str, str]]]:
         "exchange_rates": _rates(),
         "customers": customers,
         "cost_centers": cost_centers,
+        "routes": routes,
         "shipments": shipments,
         "invoices": invoices,
         "budgets": budgets,
+        "operational_costs": operational_costs,
     }
 
 
@@ -168,6 +271,19 @@ def apply_scenario(
         non_german = [row for row in result["invoices"] if row["country_code"] != "DE"]
         result["invoices"] = non_german + german[:43]
         result["invoices"].sort(key=lambda row: row["invoice_id"])
+    elif scenario == "invalid_operational_costs":
+        invalid = result["operational_costs"]
+        invalid[0]["route_id"] = "RTE-UNKNOWN"
+        invalid[1]["shipment_id"] = "SHP-UNKNOWN"
+        invalid[2]["cost_center_id"] = "CC-UNKNOWN"
+        invalid[3]["country_code"] = "ZZ"
+        invalid[4]["currency_code"] = "USD"
+        invalid[5]["posting_date"] = "2026-01-15"
+        invalid[6]["amount"] = "NaN"
+        invalid[7]["amount"] = "-10.00"
+        invalid[8]["cost_type"] = "OTHER"
+    elif scenario == "cost_correction_initial":
+        result["operational_costs"] = result["operational_costs"][1:]
     return result
 
 
@@ -194,8 +310,17 @@ def generate_scenario(
         path = batch_dir / f"{name}.csv"
         _write_csv(path, datasets[name], SOURCE_FIELDS[name])
         paths.append(path)
+    batch_id = (
+        "milestone1-correction"
+        if scenario in {"cost_correction_initial", "cost_correction_corrected"}
+        else (
+            "milestone1-invalid-operational-costs"
+            if scenario == "invalid_operational_costs"
+            else f"slice001-{scenario}"
+        )
+    )
     manifest = {
-        "batch_id": f"slice001-{scenario}",
+        "batch_id": batch_id,
         "scenario": scenario,
         "seed": seed,
         "period_start": "2025-01-01",
