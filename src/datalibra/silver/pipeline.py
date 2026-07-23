@@ -24,8 +24,16 @@ from datalibra.domain.contracts import (
     financial_claim_fingerprint,
     source_fingerprint,
 )
-from datalibra.domain.errors import ClaimsIntegrityError, StateIntegrityError
-from datalibra.domain.integrity import attestation_matches, rows_attestation
+from datalibra.domain.errors import (
+    ArtifactIntegrityError,
+    ClaimsIntegrityError,
+    StateIntegrityError,
+)
+from datalibra.domain.integrity import (
+    attestation_matches,
+    canonical_json_digest,
+    rows_attestation,
+)
 from datalibra.domain.models import PipelineStatus, PipelineSummary, QualityResult
 from datalibra.domain.normalization import (
     decimal_string,
@@ -266,14 +274,16 @@ def _load_verified_claim_manifests(
     *,
     current_batch_id: str,
     allow_current_rebuild: bool,
-) -> dict[str, list[dict[str, str]]]:
+) -> tuple[dict[str, list[dict[str, str]]], bool]:
     """Load independently attested active claim contributions or fail closed."""
 
     verified: dict[str, list[dict[str, str]]] = {}
+    current_rebuild_required = False
     for stored_batch_id, record in state.get("batches", {}).items():
         expected = record.get("invoice_claim_attestation")
         if not isinstance(expected, dict):
             if stored_batch_id == current_batch_id and allow_current_rebuild:
+                current_rebuild_required = True
                 continue
             raise StateIntegrityError(
                 "STATE_CLAIM_ATTESTATION_MISSING: processed state does not attest invoice "
@@ -284,6 +294,7 @@ def _load_verified_claim_manifests(
         rows = storage.read_batch_claim_manifest("invoices", stored_batch_id)
         if not attestation_matches(rows, expected, business_key=INVOICE_BUSINESS_KEY):
             if stored_batch_id == current_batch_id and allow_current_rebuild:
+                current_rebuild_required = True
                 continue
             raise ClaimsIntegrityError(
                 "CLAIM_MANIFEST_INTEGRITY_FAILED: missing, truncated, duplicated, altered, or "
@@ -292,7 +303,7 @@ def _load_verified_claim_manifests(
                 "root."
             )
         verified[stored_batch_id] = rows
-    return verified
+    return verified, current_rebuild_required
 
 
 def _verify_claim_aggregate(
@@ -316,6 +327,77 @@ def _claim_aggregate_matches(
         expected,
         business_key=INVOICE_BUSINESS_KEY,
     )
+
+
+def _artifact_attestations(
+    storage: PipelineStorage,
+    batch_id: str,
+    datasets: Sequence[str],
+) -> dict[str, Any]:
+    """Read and attest every committed artifact required for a no-op."""
+
+    silver = {
+        dataset: rows_attestation(
+            [row for row in storage.read_silver(dataset) if row.get("_batch_id") == batch_id]
+        )
+        for dataset in datasets
+    }
+    quarantine = {
+        dataset: rows_attestation(
+            [row for row in storage.read_quarantine(dataset) if row.get("_batch_id") == batch_id]
+        )
+        for dataset in datasets
+    }
+    quality = rows_attestation(
+        [row for row in storage.read_quality() if row.get("batch_id") == batch_id]
+    )
+    reconciliation = storage.read_reconciliation(batch_id)
+    summary = storage.read_summary(batch_id)
+    return {
+        "silver": silver,
+        "quarantine": quarantine,
+        "quality": quality,
+        "reconciliation_digest": canonical_json_digest(reconciliation),
+        "summary_digest": canonical_json_digest(summary),
+    }
+
+
+def _verify_active_artifacts(
+    storage: PipelineStorage,
+    state: dict[str, Any],
+    datasets: Sequence[str],
+    *,
+    current_batch_id: str,
+    allow_current_rebuild: bool,
+) -> bool:
+    """Verify prior evidence; return whether the current batch needs rebuilding."""
+
+    current_rebuild_required = False
+    for stored_batch_id, record in state.get("batches", {}).items():
+        expected = record.get("artifact_attestations")
+        if not isinstance(expected, dict):
+            if stored_batch_id == current_batch_id and allow_current_rebuild:
+                current_rebuild_required = True
+                continue
+            raise StateIntegrityError(
+                "STATE_ARTIFACT_ATTESTATION_MISSING: processed state does not attest required "
+                f"run evidence for batch {stored_batch_id!r}. Replay the batch from source or "
+                "rebuild the output root in true arrival order."
+            )
+        try:
+            actual = _artifact_attestations(storage, stored_batch_id, datasets)
+        except (FileNotFoundError, KeyError, TypeError, ValueError):
+            actual = {}
+        if actual != expected:
+            if stored_batch_id == current_batch_id:
+                current_rebuild_required = True
+                continue
+            raise ArtifactIntegrityError(
+                "PRIOR_ARTIFACT_INTEGRITY_FAILED: trusted or audit evidence for active batch "
+                f"{stored_batch_id!r} is missing or altered. No new publication occurred; "
+                "restore the evidence or replay into a clean output root."
+            )
+    return current_rebuild_required
 
 
 def _business_keys(
@@ -397,10 +479,8 @@ def process_batch(
         "data_contract_version": DATA_CONTRACT_VERSION,
         "quality_rules_version": project_config.quality_rules_version,
     }
-    allow_current_claim_rebuild = migrated_legacy or (
-        prior is not None and prior.get("fingerprint") != fingerprint
-    )
-    verified_claim_manifests = _load_verified_claim_manifests(
+    allow_current_claim_rebuild = migrated_legacy or prior is not None
+    verified_claim_manifests, claim_manifest_rebuild_required = _load_verified_claim_manifests(
         storage_adapter,
         state,
         current_batch_id=batch_id,
@@ -420,11 +500,23 @@ def process_batch(
             "CLAIM_AGGREGATE_RECOVERY_REQUIRED: rebuilding aggregate from verified manifests",
             extra={"batch_id": batch_id, "scenario": scenario},
         )
+    identity_compatible = prior is not None and all(
+        prior.get(key) == value for key, value in replay_identity.items()
+    )
+    artifact_rebuild_required = _verify_active_artifacts(
+        storage_adapter,
+        state,
+        project_config.ordered_datasets,
+        current_batch_id=batch_id,
+        allow_current_rebuild=migrated_legacy or not identity_compatible,
+    )
     if (
         prior
         and not migrated_legacy
+        and not claim_manifest_rebuild_required
         and claim_aggregate_valid
-        and all(prior.get(key) == value for key, value in replay_identity.items())
+        and not artifact_rebuild_required
+        and identity_compatible
     ):
         try:
             previous = _previous_summary(storage_adapter, batch_id)
@@ -832,8 +924,29 @@ def process_batch(
                 )
             )
 
-    storage_adapter.replace_batch_quality(batch_id, [result.as_row() for result in quality_results])
+    expected_quality_rows = [result.as_row() for result in quality_results]
+    storage_adapter.replace_batch_quality(batch_id, expected_quality_rows)
+    committed_quality_rows = [
+        row for row in storage_adapter.read_quality() if row.get("batch_id") == batch_id
+    ]
+    if rows_attestation(committed_quality_rows) != rows_attestation(expected_quality_rows):
+        raise ArtifactIntegrityError(
+            "QUALITY_EVIDENCE_PUBLICATION_FAILED: committed quality results are missing or "
+            "altered. Processed state was not advanced."
+        )
     storage_adapter.write_reconciliation(batch_id, reconciliation)
+    try:
+        committed_reconciliation = storage_adapter.read_reconciliation(batch_id)
+    except (FileNotFoundError, KeyError, TypeError, ValueError) as error:
+        raise ArtifactIntegrityError(
+            "RECONCILIATION_EVIDENCE_PUBLICATION_FAILED: reconciliation evidence is missing "
+            "or unreadable. Processed state was not advanced."
+        ) from error
+    if canonical_json_digest(committed_reconciliation) != canonical_json_digest(reconciliation):
+        raise ArtifactIntegrityError(
+            "RECONCILIATION_EVIDENCE_PUBLICATION_FAILED: committed reconciliation evidence "
+            "does not match the run result. Processed state was not advanced."
+        )
 
     failed_rules = tuple(
         sorted(
@@ -880,6 +993,18 @@ def process_batch(
         trusted_invoice_revenue_eur=decimal_string(invoice_revenue, project_config.money_scale),
     )
     storage_adapter.write_summary(batch_id, summary.as_dict())
+    try:
+        committed_summary = storage_adapter.read_summary(batch_id)
+    except (FileNotFoundError, KeyError, TypeError, ValueError) as error:
+        raise ArtifactIntegrityError(
+            "SUMMARY_EVIDENCE_PUBLICATION_FAILED: run summary is missing or unreadable. "
+            "Processed state was not advanced."
+        ) from error
+    if canonical_json_digest(committed_summary) != canonical_json_digest(summary.as_dict()):
+        raise ArtifactIntegrityError(
+            "SUMMARY_EVIDENCE_PUBLICATION_FAILED: committed run summary does not match the "
+            "pipeline result. Processed state was not advanced."
+        )
     batches = state.setdefault("batches", {})
     batches[batch_id] = {
         **replay_identity,
@@ -889,6 +1014,12 @@ def process_batch(
         "status": status,
         "execution_timestamp": timestamp,
     }
+    for active_batch_id in arrival_sequences:
+        batches[active_batch_id]["artifact_attestations"] = _artifact_attestations(
+            storage_adapter,
+            active_batch_id,
+            project_config.ordered_datasets,
+        )
     if status == "success":
         state["latest_successful_refresh_timestamp"] = timestamp
     state["next_arrival_sequence"] = max(arrival_sequences.values(), default=0) + 1

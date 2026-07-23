@@ -119,6 +119,9 @@ class InMemoryStorage:
     def write_reconciliation(self, batch_id: str, value: dict[str, Any]) -> None:
         self.reconciliation[batch_id] = deepcopy(value)
 
+    def read_reconciliation(self, batch_id: str) -> dict[str, Any]:
+        return deepcopy(self.reconciliation[batch_id])
+
     def write_summary(self, batch_id: str, value: dict[str, Any]) -> None:
         self.summaries[batch_id] = deepcopy(value)
 

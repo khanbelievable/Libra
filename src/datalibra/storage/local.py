@@ -241,6 +241,12 @@ class LocalCsvStorage:
     def write_reconciliation(self, batch_id: str, value: dict[str, Any]) -> None:
         write_json_atomic(self.root / "reconciliation" / f"{batch_id}.json", value)
 
+    def read_reconciliation(self, batch_id: str) -> dict[str, Any]:
+        path = self.root / "reconciliation" / f"{batch_id}.json"
+        with path.open(encoding="utf-8") as handle:
+            value: dict[str, Any] = json.load(handle)
+        return value
+
     def write_summary(self, batch_id: str, value: dict[str, Any]) -> None:
         write_json_atomic(self.root / "runs" / f"{batch_id}.json", value)
 
