@@ -10,9 +10,8 @@ Libra models a recurring finance-engineering problem: regional systems deliver o
 
 I built Libra around a fictional company, **Northstar Logistics Group**, operating in Germany,
 the Netherlands, France, the United Kingdom, and Türkiye. Milestone 1 includes a deterministic
-local oracle plus executable PySpark/Delta code and a Databricks bundle. Snowflake and Power BI
-remain specifications for Milestone 2; no cloud run is presented as complete without workspace
-evidence.
+local oracle plus an authenticated Databricks serverless execution whose Delta results match that
+oracle exactly. Snowflake and Power BI remain specifications for Milestone 2.
 
 ## What Milestone 1 proves
 
@@ -37,6 +36,8 @@ evidence.
   revenue or cost.
 - Real PySpark transformations, DecimalType finance fields, Delta MERGE publication code, and a
   deployable three-task Databricks job.
+- Authenticated bundle validation, serverless deployment, three-task workspace execution, Delta
+  inspection, local/cloud parity, and declared-owner correction evidence.
 
 ## Architecture
 
@@ -103,7 +104,7 @@ Full evidence: [Slice 001 expected results](demo/expected-results/SLICE_001.md).
 | Local CSV is an adapter, not the domain model | Keeps local verification fast and cloud implementation replaceable |
 | Costs allocate directly through shipment | Route/customer profit reconciles without a speculative shared-cost engine |
 | Month-opening FX rate is the comparison baseline | Makes FX impact deterministic and separately reviewable by Finance |
-| Delta facts preflight ownership before batch MERGE | Same-batch correction is scoped and cross-batch collisions fail closed |
+| Delta facts preflight ownership before batch MERGE | Same-batch correction is scoped; only an explicit manifest supersession may transfer an existing owner |
 
 The decisions are recorded individually under [docs/adr](docs/adr).
 
@@ -209,12 +210,13 @@ Start with the [Milestone 1 validation](docs/MILESTONE_1_VALIDATION.md),
 
 ## Current boundary and roadmap
 
-Local Bronze/Silver/Gold analytics and the PySpark/Delta bundle are implemented. Workspace
-validation, deployment, execution, and Delta inspection still require Databricks authentication
-and are reported as pending rather than simulated.
+Local Bronze/Silver/Gold analytics and the PySpark/Delta bundle are implemented. Authenticated
+workspace validation, deployment, healthy execution, Delta inspection, zero-difference
+local/cloud reconciliation, and the historical correction are complete. The public-safe evidence
+is recorded in [Milestone 1 validation](docs/MILESTONE_1_VALIDATION.md).
 
-Milestone 2 adds Snowflake governed serving and Power BI. It should begin only after the remaining
-Milestone 1 workspace actions are completed.
+Milestone 2 may now add Snowflake governed serving and Power BI; those platforms are not presented
+as deployed yet.
 
 See the [backlog](docs/BACKLOG.md) for acceptance criteria and dependencies.
 
