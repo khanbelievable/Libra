@@ -4,10 +4,11 @@ This file records non-blocking work that is intentionally outside Milestone 1.
 
 ## Databricks parity and operations
 
-- The Delta adapter fails closed when another batch owns the same financial natural key. The
-  local oracle supports richer invoice exact-replay/conflict withholding through attested claim
-  manifests. A future cloud hardening pass may implement the same claim-manifest lifecycle in
-  Delta; until then the guard favors correct totals over availability.
+- The Delta adapter supports the focused generated correction through an explicit prior-owner
+  declaration and fails closed for every undeclared financial-key collision. The local oracle
+  supports richer invoice exact-replay/conflict withholding through attested claim manifests. A
+  future cloud hardening pass may implement that generalized claim-manifest lifecycle in Delta;
+  until then the guard favors correct totals over availability.
 - Delta provides atomicity per table, while the three job tasks provide ordered convergence across
   tables. A multi-table transaction ledger and automated rollback orchestration are not required
   for this portfolio-sized batch implementation.

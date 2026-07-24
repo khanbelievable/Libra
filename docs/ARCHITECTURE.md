@@ -92,7 +92,9 @@ transform totals to the local oracle.
 
 Databricks Bronze MERGE is idempotent by batch, fingerprint, and deterministic source row. Global
 reference tables merge by natural key. Financial facts preflight natural-key ownership and then
-transactionally replace only the current batch contribution. A cross-batch fact collision fails
+transactionally replace only the current batch contribution. The focused correction manifests
+explicitly name the healthy batch they supersede, allowing one atomic Delta MERGE per fact table
+to transfer only that declared contribution. Every undeclared cross-batch collision still fails
 closed; richer invoice claim resolution remains in the local trust core and is recorded in
 `docs/FUTURE_WORK.md`.
 

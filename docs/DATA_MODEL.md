@@ -69,4 +69,7 @@ a rebuildable index.
 The focused Milestone 1 correction uses the existing batch identity. A changed fingerprint
 replaces only that batch's contribution while preserving arrival sequence and Bronze versions.
 The persisted before/after audit identifies the historical country/month and both financial
-results.
+results. In the cloud demonstration, both generated correction manifests additionally declare
+`supersedes_batch_id=slice001-healthy`. This narrowly authorizes the correction batch to replace
+the baseline fact contribution already active in Delta; no undeclared owner is eligible for
+replacement.

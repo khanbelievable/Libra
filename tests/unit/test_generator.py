@@ -1,3 +1,4 @@
+import json
 from pathlib import Path
 
 from datalibra.generators import generate_scenario
@@ -47,3 +48,13 @@ def test_broken_generators_create_expected_source_failures(tmp_path: Path) -> No
     ]
     assert len(german_invoices) == 43
     assert len(read_rows(invalid_costs / "operational_costs.csv")) == 2880
+
+
+def test_correction_manifest_declares_healthy_batch_supersession(tmp_path: Path) -> None:
+    initial = generate_scenario("cost_correction_initial", tmp_path)
+    corrected = generate_scenario("cost_correction_corrected", tmp_path)
+
+    for batch in (initial, corrected):
+        manifest = json.loads((batch / "manifest.json").read_text(encoding="utf-8"))
+        assert manifest["batch_id"] == "milestone1-correction"
+        assert manifest["supersedes_batch_id"] == "slice001-healthy"

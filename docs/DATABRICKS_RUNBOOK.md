@@ -33,6 +33,9 @@ Upload the complete `data/generated/healthy` directory to a controlled Volume pa
 The directory must retain all ten CSV files and `manifest.json`. Do not edit a manifest after
 upload; the Bronze task recomputes and verifies its SHA-256 fingerprint.
 
+The serverless job installs the wheel through its shared environment rather than task-level
+libraries. Environment version `4` supplies Python 3.12, matching the package requirement.
+
 ## Authenticate and validate
 
 ```powershell
@@ -113,18 +116,23 @@ libra generate correction --output data/generated
 ```
 
 Run `cost_correction_initial` first, then `cost_correction_corrected`, both with
-`batch_id=milestone1-correction`. The corrected run must keep the same batch owner, replace its
-2,879-cost contribution with 2,880 unique costs, change January 2025 DE cost/profit, and leave
-invoice revenue unchanged.
+`batch_id=milestone1-correction`. Their generated manifests declare
+`supersedes_batch_id=slice001-healthy`; do not add or edit that field after generation. The
+initial run atomically transfers the declared healthy fact contribution to the correction owner.
+The corrected run must keep that same owner, replace its 2,879-cost contribution with 2,880
+unique costs, change January 2025 DE cost/profit, and leave invoice revenue unchanged.
 
 ## Recovery
 
 - An exact rerun is idempotent at Bronze and Silver.
 - A same-batch correction replaces only that batch's fact contribution.
+- An explicit supersession replaces only the current and manifest-declared prior fact owners in
+  each table. Bronze evidence for every fingerprint remains immutable.
 - Delta commits are table-atomic. If a later task fails, correct the cause and rerun the same
   job parameters; Gold is not published until Silver completes.
-- A financial natural key owned by another batch fails before Silver fact publication. Resolve
-  the source ownership issue rather than changing the batch ID to bypass the guard.
+- A financial natural key owned by any undeclared batch fails before Silver fact publication.
+  Resolve the source ownership issue rather than changing the batch ID or editing the manifest to
+  bypass the guard.
 
 ## Teardown
 

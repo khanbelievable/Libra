@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 from pathlib import Path
 from typing import Any
 
@@ -93,7 +94,19 @@ def _validate_manifest(landing_path: str, batch_id: str) -> dict[str, Any]:
     actual = source_fingerprint(paths)
     if actual != manifest.get("fingerprint"):
         raise ValueError("Landing files do not match the manifest source fingerprint")
+    _superseded_batch_id(manifest, batch_id)
     return manifest
+
+
+def _superseded_batch_id(manifest: dict[str, Any], batch_id: str) -> str | None:
+    value = manifest.get("supersedes_batch_id")
+    if value is None:
+        return None
+    if not isinstance(value, str) or not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9._-]{0,99}", value):
+        raise ValueError("Manifest supersedes_batch_id is invalid")
+    if value == batch_id:
+        raise ValueError("Manifest supersedes_batch_id must identify another batch")
+    return value
 
 
 def land_bronze() -> None:
@@ -141,6 +154,7 @@ def build_silver() -> None:
     }
     trusted, quarantine = standardize_batch(bronze)
     keys = load_project_config().dataset_keys
+    supersedes_batch_id = _superseded_batch_id(manifest, args.batch_id)
     for dataset in FACT_DATASETS:
         reject_cross_batch_fact_collision(
             spark,
@@ -148,6 +162,7 @@ def build_silver() -> None:
             _table(args.catalog, args.schema, "silver", dataset),
             batch_id=args.batch_id,
             business_key=keys[dataset],
+            supersedes_batch_id=supersedes_batch_id,
         )
     for dataset in DATASET_ORDER:
         if dataset in FACT_DATASETS:
@@ -157,6 +172,7 @@ def build_silver() -> None:
                 _table(args.catalog, args.schema, "silver", dataset),
                 batch_id=args.batch_id,
                 business_key=keys[dataset],
+                supersedes_batch_id=supersedes_batch_id,
             )
         else:
             upsert_reference(

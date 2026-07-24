@@ -21,8 +21,9 @@ def replace_batch(
     *,
     batch_id: str,
     business_key: Sequence[str],
+    supersedes_batch_id: str | None = None,
 ) -> None:
-    """Transactionally replace one batch contribution without touching other owners."""
+    """Transactionally replace one declared ownership contribution."""
 
     from delta.tables import DeltaTable  # type: ignore[import-not-found]
     from pyspark.sql import functions as F
@@ -32,19 +33,31 @@ def replace_batch(
         frame.write.format("delta").mode("overwrite").saveAsTable(table_name)
         return
     target = DeltaTable.forName(spark, table_name)
-    keys = (*business_key, "_batch_id")
-    condition = reduce(
+    owner_ids = _replacement_owner_ids(batch_id, supersedes_batch_id)
+    owner_condition = F.col("target._batch_id").isin(*owner_ids)
+    key_condition = reduce(
         and_,
-        (F.col(f"target.{field}") == F.col(f"source.{field}") for field in keys),
+        (F.col(f"target.{field}") == F.col(f"source.{field}") for field in business_key),
     )
     (
         target.alias("target")
-        .merge(frame.alias("source"), condition)
+        .merge(frame.alias("source"), owner_condition & key_condition)
         .whenMatchedUpdateAll()
         .whenNotMatchedInsertAll()
-        .whenNotMatchedBySourceDelete(condition=F.col("target._batch_id") == F.lit(batch_id))
+        .whenNotMatchedBySourceDelete(condition=owner_condition)
         .execute()
     )
+
+
+def _replacement_owner_ids(
+    batch_id: str,
+    supersedes_batch_id: str | None,
+) -> tuple[str, ...]:
+    if supersedes_batch_id is None:
+        return (batch_id,)
+    if supersedes_batch_id == batch_id:
+        raise ValueError("A batch cannot supersede itself")
+    return (batch_id, supersedes_batch_id)
 
 
 def merge_bronze_evidence(spark: Any, frame: Any, table_name: str) -> None:
@@ -108,18 +121,20 @@ def reject_cross_batch_fact_collision(
     *,
     batch_id: str,
     business_key: Sequence[str],
+    supersedes_batch_id: str | None = None,
 ) -> None:
-    """Fail before publication if another batch owns the same financial key."""
+    """Fail before publication if an undeclared batch owns the same financial key."""
 
     from pyspark.sql import functions as F
 
     _validate_table_name(table_name)
     if not spark.catalog.tableExists(table_name):
         return
+    owner_ids = _replacement_owner_ids(batch_id, supersedes_batch_id)
     incoming_keys = frame.select(*business_key).distinct()
     other_owner_keys = (
         spark.table(table_name)
-        .filter(F.col("_batch_id") != F.lit(batch_id))
+        .filter(~F.col("_batch_id").isin(*owner_ids))
         .select(*business_key)
         .distinct()
     )

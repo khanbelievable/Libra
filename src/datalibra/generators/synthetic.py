@@ -329,6 +329,8 @@ def generate_scenario(
         "datasets": {name: len(datasets[name]) for name in DATASET_ORDER},
         "fingerprint": source_fingerprint(paths),
     }
+    if scenario in {"cost_correction_initial", "cost_correction_corrected"}:
+        manifest["supersedes_batch_id"] = "slice001-healthy"
     manifest_path = batch_dir / "manifest.json"
     manifest_path.write_text(
         json.dumps(manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8"

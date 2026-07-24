@@ -11,5 +11,8 @@
 - **Consequences:** Direct allocation reconciles exactly but does not model shared corporate cost.
   Percentages use reconciled totals and four decimal places. Databricks Bronze is idempotent by
   batch/fingerprint/source row; references merge globally by natural key; facts replace one batch
-  contribution transactionally. A financial key owned by another cloud batch fails closed rather
-  than creating duplicate totals. Local Spark contracts must match local Gold controls.
+  contribution transactionally. A correction may transfer ownership only when its generated
+  manifest explicitly names the prior batch in `supersedes_batch_id`; one Delta MERGE replaces
+  exactly the current and declared-prior contribution. Any other financial-key owner still fails
+  closed rather than creating duplicate totals. Local Spark contracts must match local Gold
+  controls.

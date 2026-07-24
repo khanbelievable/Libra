@@ -36,7 +36,7 @@
 - Missing, truncated, duplicated, altered, mis-owned, or stale claim evidence cannot shrink
   trusted Silver or advance processed state.
 - Exact shipment/budget replays retain the first owner; conflicting cross-batch monetary facts
-  fail closed pending an explicit ownership architecture.
+  fail closed unless a generated correction manifest explicitly declares the owner it supersedes.
 - Snowflake and Power BI contain only reviewed interfaces/specifications; no fake deployment or PBIX is claimed.
 
 ## Evidence

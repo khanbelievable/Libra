@@ -26,5 +26,7 @@ def test_bundle_declares_one_three_task_serverless_wheel_job() -> None:
     assert tasks[1]["depends_on"] == [{"task_key": "land_bronze"}]
     assert tasks[2]["depends_on"] == [{"task_key": "build_silver"}]
     assert all(task["environment_key"] == "default" for task in tasks)
-    assert all(task["libraries"] == [{"whl": "../../dist/*.whl"}] for task in tasks)
+    assert all("libraries" not in task for task in tasks)
     assert [environment["environment_key"] for environment in job["environments"]] == ["default"]
+    assert job["environments"][0]["spec"]["environment_version"] == "4"
+    assert job["environments"][0]["spec"]["dependencies"] == ["../../dist/*.whl"]
