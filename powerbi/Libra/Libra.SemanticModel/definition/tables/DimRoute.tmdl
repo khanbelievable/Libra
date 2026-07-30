@@ -1,0 +1,31 @@
+table DimRoute
+	column RouteKey
+		dataType: int64
+		isHidden
+		summarizeBy: none
+		sourceColumn: ROUTE_KEY
+	column RouteId
+		dataType: string
+		summarizeBy: none
+		sourceColumn: ROUTE_ID
+	column OriginCountryKey
+		dataType: int64
+		isHidden
+		summarizeBy: none
+		sourceColumn: ORIGIN_COUNTRY_KEY
+	column DestinationCountryKey
+		dataType: int64
+		isHidden
+		summarizeBy: none
+		sourceColumn: DESTINATION_COUNTRY_KEY
+	column TransportMode
+		dataType: string
+		sourceColumn: TRANSPORT_MODE
+	column DistanceKm
+		dataType: decimal
+		formatString: #,##0.00
+		summarizeBy: none
+		sourceColumn: DISTANCE_KM
+	partition DimRoute = m
+		mode: import
+		source = SnowflakeSource{[Name="DIM_ROUTE",Kind="View"]}[Data]

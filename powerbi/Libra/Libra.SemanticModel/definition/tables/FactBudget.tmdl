@@ -1,0 +1,37 @@
+table FactBudget
+	column MonthDateKey
+		dataType: int64
+		isHidden
+		summarizeBy: none
+		sourceColumn: MONTH_DATE_KEY
+	column CostCenterKey
+		dataType: int64
+		isHidden
+		summarizeBy: none
+		sourceColumn: COST_CENTER_KEY
+	column CurrencyKey
+		dataType: int64
+		isHidden
+		summarizeBy: none
+		sourceColumn: CURRENCY_KEY
+	column OriginalAmount
+		dataType: decimal
+		isHidden
+		summarizeBy: none
+		sourceColumn: ORIGINAL_AMOUNT
+	column FXRateToEUR
+		dataType: decimal
+		summarizeBy: none
+		sourceColumn: FX_RATE_TO_EUR
+	column AmountEUR
+		dataType: decimal
+		isHidden
+		summarizeBy: none
+		sourceColumn: AMOUNT_EUR
+	column BatchId
+		dataType: string
+		summarizeBy: none
+		sourceColumn: SOURCE_BATCH_ID
+	partition FactBudget = m
+		mode: import
+		source = SnowflakeSource{[Name="FACT_BUDGET",Kind="View"]}[Data]

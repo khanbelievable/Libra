@@ -1,0 +1,65 @@
+table FactInvoice
+	column InvoiceId
+		dataType: string
+		summarizeBy: none
+		sourceColumn: INVOICE_ID
+	column ShipmentId
+		dataType: string
+		summarizeBy: none
+		sourceColumn: SHIPMENT_ID
+	column InvoiceDateKey
+		dataType: int64
+		isHidden
+		summarizeBy: none
+		sourceColumn: INVOICE_DATE_KEY
+	column CountryKey
+		dataType: int64
+		isHidden
+		summarizeBy: none
+		sourceColumn: COUNTRY_KEY
+	column RouteKey
+		dataType: int64
+		isHidden
+		summarizeBy: none
+		sourceColumn: ROUTE_KEY
+	column CustomerKey
+		dataType: int64
+		isHidden
+		summarizeBy: none
+		sourceColumn: CUSTOMER_KEY
+	column CostCenterKey
+		dataType: int64
+		isHidden
+		summarizeBy: none
+		sourceColumn: COST_CENTER_KEY
+	column CurrencyKey
+		dataType: int64
+		isHidden
+		summarizeBy: none
+		sourceColumn: CURRENCY_KEY
+	column OriginalAmount
+		dataType: decimal
+		isHidden
+		summarizeBy: none
+		sourceColumn: ORIGINAL_AMOUNT
+	column FXRateToEUR
+		dataType: decimal
+		summarizeBy: none
+		sourceColumn: FX_RATE_TO_EUR
+	column AmountEUR
+		dataType: decimal
+		isHidden
+		summarizeBy: none
+		sourceColumn: AMOUNT_EUR
+	column AmountAtComparisonRateEUR
+		dataType: decimal
+		isHidden
+		summarizeBy: none
+		sourceColumn: AMOUNT_AT_COMPARISON_RATE_EUR
+	column BatchId
+		dataType: string
+		summarizeBy: none
+		sourceColumn: SOURCE_BATCH_ID
+	partition FactInvoice = m
+		mode: import
+		source = SnowflakeSource{[Name="FACT_INVOICE",Kind="View"]}[Data]

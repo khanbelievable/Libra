@@ -1,0 +1,21 @@
+table DimCostCenter
+	column CostCenterKey
+		dataType: int64
+		isHidden
+		summarizeBy: none
+		sourceColumn: COST_CENTER_KEY
+	column CostCenterId
+		dataType: string
+		summarizeBy: none
+		sourceColumn: COST_CENTER_ID
+	column CostCenter
+		dataType: string
+		sourceColumn: COST_CENTER_NAME
+	column CountryKey
+		dataType: int64
+		isHidden
+		summarizeBy: none
+		sourceColumn: COUNTRY_KEY
+	partition DimCostCenter = m
+		mode: import
+		source = SnowflakeSource{[Name="DIM_COST_CENTER",Kind="View"]}[Data]

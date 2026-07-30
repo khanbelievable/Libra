@@ -1,4 +1,4 @@
-// Approved semantic definitions. Add to a dedicated Measures table in Power BI Desktop.
+// Approved semantic definitions. Implemented in Libra.SemanticModel/definition/tables/Measures.tmdl.
 
 Total Revenue := COALESCE(SUM(FactInvoice[AmountEUR]), 0)
 

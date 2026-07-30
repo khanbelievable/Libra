@@ -1,0 +1,14 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.9.0/schema.json",
+  "name": "b0000000000000000003",
+  "position": {"x": 24, "y": 178, "z": 2000, "height": 420, "width": 700, "tabOrder": 2000},
+  "visual": {
+    "visualType": "tableEx",
+    "query": {"queryState":{"Values":{"projections":[
+      {"field":{"Column":{"Expression":{"SourceRef":{"Entity":"DimCustomer"}},"Property":"Customer"}},"queryRef":"DimCustomer.Customer","nativeQueryRef":"Customer"},
+      {"field":{"Measure":{"Expression":{"SourceRef":{"Entity":"Measures"}},"Property":"Total Revenue"}},"queryRef":"Measures.Total Revenue","nativeQueryRef":"Total Revenue"},
+      {"field":{"Measure":{"Expression":{"SourceRef":{"Entity":"Measures"}},"Property":"Gross Profit"}},"queryRef":"Measures.Gross Profit","nativeQueryRef":"Gross Profit"},
+      {"field":{"Measure":{"Expression":{"SourceRef":{"Entity":"Measures"}},"Property":"Gross Margin Percentage"}},"queryRef":"Measures.Gross Margin Percentage","nativeQueryRef":"Gross Margin Percentage"}
+    ]}}}
+  }
+}

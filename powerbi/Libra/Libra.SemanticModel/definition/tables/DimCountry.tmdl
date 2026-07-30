@@ -1,0 +1,18 @@
+table DimCountry
+	column CountryKey
+		dataType: int64
+		isHidden
+		summarizeBy: none
+		sourceColumn: COUNTRY_KEY
+	column CountryCode
+		dataType: string
+		sourceColumn: COUNTRY_CODE
+	column Country
+		dataType: string
+		sourceColumn: COUNTRY_NAME
+	column DefaultCurrency
+		dataType: string
+		sourceColumn: DEFAULT_CURRENCY
+	partition DimCountry = m
+		mode: import
+		source = SnowflakeSource{[Name="DIM_COUNTRY",Kind="View"]}[Data]

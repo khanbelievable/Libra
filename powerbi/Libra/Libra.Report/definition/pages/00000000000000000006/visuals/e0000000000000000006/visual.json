@@ -1,0 +1,5 @@
+{
+  "$schema":"https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.9.0/schema.json",
+  "name":"e0000000000000000006","position":{"x":340,"y":620,"z":5000,"height":76,"width":300,"tabOrder":5000},
+  "visual":{"visualType":"slicer","query":{"queryState":{"Values":{"projections":[{"field":{"Column":{"Expression":{"SourceRef":{"Entity":"DimCountry"}},"Property":"Country"}},"queryRef":"DimCountry.Country","nativeQueryRef":"Country"}]}}}}
+}

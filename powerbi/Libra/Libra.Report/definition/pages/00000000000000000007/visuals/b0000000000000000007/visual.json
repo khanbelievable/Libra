@@ -1,0 +1,18 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.9.0/schema.json",
+  "name": "b0000000000000000007",
+  "position": {"x": 24, "y": 178, "z": 2000, "height": 420, "width": 1232, "tabOrder": 2000},
+  "visual": {
+    "visualType": "tableEx",
+    "query": {"queryState":{"Values":{"projections":[
+      {"field":{"Column":{"Expression":{"SourceRef":{"Entity":"FactInvoice"}},"Property":"InvoiceId"}},"queryRef":"FactInvoice.InvoiceId","nativeQueryRef":"InvoiceId"},
+      {"field":{"Column":{"Expression":{"SourceRef":{"Entity":"FactInvoice"}},"Property":"ShipmentId"}},"queryRef":"FactInvoice.ShipmentId","nativeQueryRef":"ShipmentId"},
+      {"field":{"Column":{"Expression":{"SourceRef":{"Entity":"DimCustomer"}},"Property":"Customer"}},"queryRef":"DimCustomer.Customer","nativeQueryRef":"Customer"},
+      {"field":{"Column":{"Expression":{"SourceRef":{"Entity":"DimCurrency"}},"Property":"CurrencyCode"}},"queryRef":"DimCurrency.CurrencyCode","nativeQueryRef":"CurrencyCode"},
+      {"field":{"Column":{"Expression":{"SourceRef":{"Entity":"FactInvoice"}},"Property":"OriginalAmount"}},"queryRef":"FactInvoice.OriginalAmount","nativeQueryRef":"OriginalAmount"},
+      {"field":{"Column":{"Expression":{"SourceRef":{"Entity":"FactInvoice"}},"Property":"FXRateToEUR"}},"queryRef":"FactInvoice.FXRateToEUR","nativeQueryRef":"FXRateToEUR"},
+      {"field":{"Column":{"Expression":{"SourceRef":{"Entity":"FactInvoice"}},"Property":"AmountEUR"}},"queryRef":"FactInvoice.AmountEUR","nativeQueryRef":"AmountEUR"},
+      {"field":{"Column":{"Expression":{"SourceRef":{"Entity":"FactInvoice"}},"Property":"BatchId"}},"queryRef":"FactInvoice.BatchId","nativeQueryRef":"BatchId"}
+    ]}}}
+  }
+}

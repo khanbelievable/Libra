@@ -1,0 +1,15 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.9.0/schema.json",
+  "name": "b0000000000000000006",
+  "position": {"x": 24, "y": 178, "z": 2000, "height": 420, "width": 1232, "tabOrder": 2000},
+  "visual": {
+    "visualType": "tableEx",
+    "query": {"queryState":{"Values":{"projections":[
+      {"field":{"Column":{"Expression":{"SourceRef":{"Entity":"FactDataQualityResult"}},"Property":"BatchId"}},"queryRef":"FactDataQualityResult.BatchId","nativeQueryRef":"BatchId"},
+      {"field":{"Column":{"Expression":{"SourceRef":{"Entity":"FactDataQualityResult"}},"Property":"Dataset"}},"queryRef":"FactDataQualityResult.Dataset","nativeQueryRef":"Dataset"},
+      {"field":{"Column":{"Expression":{"SourceRef":{"Entity":"FactDataQualityResult"}},"Property":"Rule"}},"queryRef":"FactDataQualityResult.Rule","nativeQueryRef":"Rule"},
+      {"field":{"Column":{"Expression":{"SourceRef":{"Entity":"FactDataQualityResult"}},"Property":"ValidationStatus"}},"queryRef":"FactDataQualityResult.ValidationStatus","nativeQueryRef":"ValidationStatus"},
+      {"field":{"Measure":{"Expression":{"SourceRef":{"Entity":"Measures"}},"Property":"Failed Quality Rows"}},"queryRef":"Measures.Failed Quality Rows","nativeQueryRef":"Failed Quality Rows"}
+    ]}}}
+  }
+}

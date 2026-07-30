@@ -1,0 +1,14 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.9.0/schema.json",
+  "name": "a0000000000000000004",
+  "position": {"x": 24, "y": 24, "z": 1000, "height": 130, "width": 1200, "tabOrder": 1000},
+  "visual": {
+    "visualType": "cardVisual",
+    "query": {"queryState":{"Data":{"projections":[
+      {"field":{"Measure":{"Expression":{"SourceRef":{"Entity":"Measures"}},"Property":"Budget Amount"}},"queryRef":"Measures.Budget Amount","nativeQueryRef":"Budget Amount"},
+      {"field":{"Measure":{"Expression":{"SourceRef":{"Entity":"Measures"}},"Property":"Actual Cost"}},"queryRef":"Measures.Actual Cost","nativeQueryRef":"Actual Cost"},
+      {"field":{"Measure":{"Expression":{"SourceRef":{"Entity":"Measures"}},"Property":"Budget Variance Amount"}},"queryRef":"Measures.Budget Variance Amount","nativeQueryRef":"Budget Variance Amount"},
+      {"field":{"Measure":{"Expression":{"SourceRef":{"Entity":"Measures"}},"Property":"Budget Variance Percentage"}},"queryRef":"Measures.Budget Variance Percentage","nativeQueryRef":"Budget Variance Percentage"}
+    ]}}}
+  }
+}

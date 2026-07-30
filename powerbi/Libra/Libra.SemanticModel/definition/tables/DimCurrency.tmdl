@@ -1,0 +1,20 @@
+table DimCurrency
+	column CurrencyKey
+		dataType: int64
+		isHidden
+		summarizeBy: none
+		sourceColumn: CURRENCY_KEY
+	column CurrencyCode
+		dataType: string
+		sourceColumn: CURRENCY_CODE
+	column Currency
+		dataType: string
+		sourceColumn: CURRENCY_NAME
+	column DecimalPlaces
+		dataType: int64
+		isHidden
+		summarizeBy: none
+		sourceColumn: DECIMAL_PLACES
+	partition DimCurrency = m
+		mode: import
+		source = SnowflakeSource{[Name="DIM_CURRENCY",Kind="View"]}[Data]

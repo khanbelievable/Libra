@@ -1,0 +1,11 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/gitIntegration/platformProperties/2.0.0/schema.json",
+  "metadata": {
+    "type": "Report",
+    "displayName": "Libra"
+  },
+  "config": {
+    "version": "2.0",
+    "logicalId": "879320e1-d94a-482a-b4ec-4c36c417f31c"
+  }
+}

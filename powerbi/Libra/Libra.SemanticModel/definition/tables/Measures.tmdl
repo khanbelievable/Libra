@@ -1,0 +1,53 @@
+table Measures
+
+	/// Recognized invoice revenue translated by the approved Databricks FX rate.
+	measure 'Total Revenue' = COALESCE(SUM(FactInvoice[AmountEUR]), 0)
+		formatString: € #,##0.00
+
+	measure 'Total Operational Cost' = COALESCE(SUM(FactOperationalCost[AmountEUR]), 0)
+		formatString: € #,##0.00
+
+	measure 'Gross Profit' = [Total Revenue] - [Total Operational Cost]
+		formatString: € #,##0.00
+
+	measure 'Gross Margin Percentage' = DIVIDE([Gross Profit], [Total Revenue])
+		formatString: 0.00%
+
+	measure 'Shipment Count' = DISTINCTCOUNT(FactShipment[ShipmentId])
+		formatString: #,##0
+
+	measure 'Revenue per Shipment' = DIVIDE([Total Revenue], [Shipment Count])
+		formatString: € #,##0.00
+
+	measure 'Cost per Shipment' = DIVIDE([Total Operational Cost], [Shipment Count])
+		formatString: € #,##0.00
+
+	measure 'Budget Amount' = COALESCE(SUM(FactBudget[AmountEUR]), 0)
+		formatString: € #,##0.00
+
+	measure 'Actual Cost' = [Total Operational Cost]
+		formatString: € #,##0.00
+
+	measure 'Budget Variance Amount' = IF(ISBLANK([Budget Amount]), BLANK(), [Budget Amount] - [Actual Cost])
+		formatString: € #,##0.00;[Red]-€ #,##0.00
+
+	measure 'Budget Variance Percentage' = DIVIDE([Budget Variance Amount], [Budget Amount])
+		formatString: 0.00%;[Red]-0.00%
+
+	measure 'FX Impact' = SUMX(FactInvoice, FactInvoice[AmountEUR] - FactInvoice[AmountAtComparisonRateEUR])
+		formatString: € #,##0.00;[Red]-€ #,##0.00
+
+	measure 'Failed Quality Rows' = CALCULATE(SUM(FactDataQualityResult[FailedRowCount]), FactDataQualityResult[ValidationStatus] = "FAIL")
+		formatString: #,##0
+
+	measure 'Latest Successful Refresh' = MAX(FactDataQualityResult[LatestSuccessfulRefreshTimestamp])
+		formatString: yyyy-MM-dd HH:mm:ss
+
+	column Value
+		dataType: string
+		isHidden
+		sourceColumn: Value
+
+	partition Measures = calculated
+		mode: import
+		source = DATATABLE("Value", STRING, {{"Measures"}})

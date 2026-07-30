@@ -1,0 +1,13 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.9.0/schema.json",
+  "name": "c0000000000000000001",
+  "position": {"x": 808, "y": 178, "z": 3000, "height": 420, "width": 448, "tabOrder": 3000},
+  "visual": {
+    "visualType": "cardVisual",
+    "query": {"queryState":{"Data":{"projections":[
+      {"field":{"Measure":{"Expression":{"SourceRef":{"Entity":"Measures"}},"Property":"Budget Variance Amount"}},"queryRef":"Measures.Budget Variance Amount","nativeQueryRef":"Budget Variance Amount"},
+      {"field":{"Measure":{"Expression":{"SourceRef":{"Entity":"Measures"}},"Property":"Failed Quality Rows"}},"queryRef":"Measures.Failed Quality Rows","nativeQueryRef":"Failed Quality Rows"},
+      {"field":{"Measure":{"Expression":{"SourceRef":{"Entity":"Measures"}},"Property":"Latest Successful Refresh"}},"queryRef":"Measures.Latest Successful Refresh","nativeQueryRef":"Latest Successful Refresh"}
+    ]}}}
+  }
+}

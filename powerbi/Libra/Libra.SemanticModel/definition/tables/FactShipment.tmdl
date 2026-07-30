@@ -1,0 +1,57 @@
+table FactShipment
+	column ShipmentId
+		dataType: string
+		summarizeBy: none
+		sourceColumn: SHIPMENT_ID
+	column ShipmentDateKey
+		dataType: int64
+		isHidden
+		summarizeBy: none
+		sourceColumn: SHIPMENT_DATE_KEY
+	column RouteKey
+		dataType: int64
+		isHidden
+		summarizeBy: none
+		sourceColumn: ROUTE_KEY
+	column CountryKey
+		dataType: int64
+		isHidden
+		summarizeBy: none
+		sourceColumn: COUNTRY_KEY
+	column CustomerKey
+		dataType: int64
+		isHidden
+		summarizeBy: none
+		sourceColumn: CUSTOMER_KEY
+	column CostCenterKey
+		dataType: int64
+		isHidden
+		summarizeBy: none
+		sourceColumn: COST_CENTER_KEY
+	column CurrencyKey
+		dataType: int64
+		isHidden
+		summarizeBy: none
+		sourceColumn: CURRENCY_KEY
+	column VolumeM3
+		dataType: decimal
+		formatString: #,##0.00
+		summarizeBy: sum
+		sourceColumn: VOLUME_M3
+	column OriginalAmount
+		dataType: decimal
+		isHidden
+		summarizeBy: none
+		sourceColumn: ORIGINAL_AMOUNT
+	column AmountEUR
+		dataType: decimal
+		isHidden
+		summarizeBy: none
+		sourceColumn: AMOUNT_EUR
+	column BatchId
+		dataType: string
+		summarizeBy: none
+		sourceColumn: SOURCE_BATCH_ID
+	partition FactShipment = m
+		mode: import
+		source = SnowflakeSource{[Name="FACT_SHIPMENT",Kind="View"]}[Data]

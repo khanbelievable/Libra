@@ -1,0 +1,13 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.9.0/schema.json",
+  "name": "a0000000000000000003",
+  "position": {"x": 24, "y": 24, "z": 1000, "height": 130, "width": 900, "tabOrder": 1000},
+  "visual": {
+    "visualType": "cardVisual",
+    "query": {"queryState":{"Data":{"projections":[
+      {"field":{"Measure":{"Expression":{"SourceRef":{"Entity":"Measures"}},"Property":"Total Revenue"}},"queryRef":"Measures.Total Revenue","nativeQueryRef":"Total Revenue"},
+      {"field":{"Measure":{"Expression":{"SourceRef":{"Entity":"Measures"}},"Property":"Total Operational Cost"}},"queryRef":"Measures.Total Operational Cost","nativeQueryRef":"Total Operational Cost"},
+      {"field":{"Measure":{"Expression":{"SourceRef":{"Entity":"Measures"}},"Property":"Gross Profit"}},"queryRef":"Measures.Gross Profit","nativeQueryRef":"Gross Profit"}
+    ]}}}
+  }
+}

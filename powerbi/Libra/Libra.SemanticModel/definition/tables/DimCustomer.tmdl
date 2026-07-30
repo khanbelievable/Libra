@@ -1,0 +1,21 @@
+table DimCustomer
+	column CustomerKey
+		dataType: int64
+		isHidden
+		summarizeBy: none
+		sourceColumn: CUSTOMER_KEY
+	column CustomerId
+		dataType: string
+		summarizeBy: none
+		sourceColumn: CUSTOMER_ID
+	column Customer
+		dataType: string
+		sourceColumn: CUSTOMER_NAME
+	column CountryKey
+		dataType: int64
+		isHidden
+		summarizeBy: none
+		sourceColumn: COUNTRY_KEY
+	partition DimCustomer = m
+		mode: import
+		source = SnowflakeSource{[Name="DIM_CUSTOMER",Kind="View"]}[Data]

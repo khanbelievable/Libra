@@ -1,0 +1,30 @@
+table DimDate
+	column DateKey
+		dataType: int64
+		isHidden
+		summarizeBy: none
+		sourceColumn: DATE_KEY
+	column Date
+		dataType: dateTime
+		formatString: Short Date
+		summarizeBy: none
+		sourceColumn: DATE_VALUE
+	column Year
+		dataType: int64
+		summarizeBy: none
+		sourceColumn: YEAR_NUMBER
+	column Quarter
+		dataType: int64
+		summarizeBy: none
+		sourceColumn: QUARTER_NUMBER
+	column Month
+		dataType: string
+		sourceColumn: MONTH_NAME
+	column MonthStart
+		dataType: dateTime
+		formatString: MMM yyyy
+		summarizeBy: none
+		sourceColumn: MONTH_START
+	partition DimDate = m
+		mode: import
+		source = SnowflakeSource{[Name="DIM_DATE",Kind="View"]}[Data]

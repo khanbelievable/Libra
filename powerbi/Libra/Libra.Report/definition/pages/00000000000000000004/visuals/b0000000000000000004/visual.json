@@ -1,0 +1,16 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.9.0/schema.json",
+  "name": "b0000000000000000004",
+  "position": {"x": 24, "y": 178, "z": 2000, "height": 420, "width": 1232, "tabOrder": 2000},
+  "visual": {
+    "visualType": "clusteredColumnChart",
+    "query": {"queryState":{
+      "Category":{"projections":[{"field":{"Column":{"Expression":{"SourceRef":{"Entity":"DimCostCenter"}},"Property":"CostCenter"}},"queryRef":"DimCostCenter.CostCenter","nativeQueryRef":"CostCenter"}]},
+      "Y":{"projections":[
+        {"field":{"Measure":{"Expression":{"SourceRef":{"Entity":"Measures"}},"Property":"Budget Amount"}},"queryRef":"Measures.Budget Amount","nativeQueryRef":"Budget Amount"},
+        {"field":{"Measure":{"Expression":{"SourceRef":{"Entity":"Measures"}},"Property":"Actual Cost"}},"queryRef":"Measures.Actual Cost","nativeQueryRef":"Actual Cost"},
+        {"field":{"Measure":{"Expression":{"SourceRef":{"Entity":"Measures"}},"Property":"Budget Variance Amount"}},"queryRef":"Measures.Budget Variance Amount","nativeQueryRef":"Budget Variance Amount"}
+      ]}
+    }}
+  }
+}

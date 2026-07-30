@@ -1,0 +1,13 @@
+expression SnowflakeServer = "configure-in-power-bi-desktop"
+	meta [IsParameterQuery=true, Type="Text", IsParameterQueryRequired=true]
+
+expression SnowflakeWarehouse = "configure-in-power-bi-desktop"
+	meta [IsParameterQuery=true, Type="Text", IsParameterQueryRequired=true]
+
+expression SnowflakeSource =
+	let
+		Source = Snowflake.Databases(SnowflakeServer, SnowflakeWarehouse, [Implementation="2.0"]),
+		Database = Source{[Name="LIBRA"]}[Data],
+		Reporting = Database{[Name="REPORTING",Kind="Schema"]}[Data]
+	in
+		Reporting

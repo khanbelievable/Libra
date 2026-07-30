@@ -1,0 +1,44 @@
+table FactDataQualityResult
+	column BatchId
+		dataType: string
+		summarizeBy: none
+		sourceColumn: BATCH_ID
+	column ExecutionDateKey
+		dataType: int64
+		isHidden
+		summarizeBy: none
+		sourceColumn: EXECUTION_DATE_KEY
+	column Dataset
+		dataType: string
+		sourceColumn: AFFECTED_DATASET
+	column Rule
+		dataType: string
+		sourceColumn: RULE_NAME
+	column ValidationStatus
+		dataType: string
+		sourceColumn: VALIDATION_STATUS
+	column FailureReason
+		dataType: string
+		sourceColumn: FAILURE_REASON
+	column FailedRowCount
+		dataType: int64
+		isHidden
+		summarizeBy: none
+		sourceColumn: FAILED_ROW_COUNT
+	column AffectedFinancialAmountEUR
+		dataType: decimal
+		summarizeBy: none
+		sourceColumn: AFFECTED_FINANCIAL_AMOUNT_EUR
+	column ExecutionTimestamp
+		dataType: dateTime
+		formatString: yyyy-MM-dd HH:mm:ss
+		summarizeBy: none
+		sourceColumn: EXECUTION_TIMESTAMP
+	column LatestSuccessfulRefreshTimestamp
+		dataType: dateTime
+		formatString: yyyy-MM-dd HH:mm:ss
+		summarizeBy: none
+		sourceColumn: LATEST_SUCCESSFUL_REFRESH_TIMESTAMP
+	partition FactDataQualityResult = m
+		mode: import
+		source = SnowflakeSource{[Name="FACT_DATA_QUALITY_RESULT",Kind="View"]}[Data]

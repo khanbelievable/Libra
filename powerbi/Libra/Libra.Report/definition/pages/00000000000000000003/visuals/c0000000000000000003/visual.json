@@ -1,0 +1,15 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/item/report/definition/visualContainer/2.9.0/schema.json",
+  "name": "c0000000000000000003",
+  "position": {"x": 748, "y": 178, "z": 3000, "height": 420, "width": 508, "tabOrder": 3000},
+  "visual": {
+    "visualType": "barChart",
+    "query": {"queryState":{
+      "Category":{"projections":[{"field":{"Column":{"Expression":{"SourceRef":{"Entity":"DimRoute"}},"Property":"RouteId"}},"queryRef":"DimRoute.RouteId","nativeQueryRef":"RouteId"}]},
+      "Y":{"projections":[
+        {"field":{"Measure":{"Expression":{"SourceRef":{"Entity":"Measures"}},"Property":"Total Operational Cost"}},"queryRef":"Measures.Total Operational Cost","nativeQueryRef":"Total Operational Cost"},
+        {"field":{"Measure":{"Expression":{"SourceRef":{"Entity":"Measures"}},"Property":"Shipment Count"}},"queryRef":"Measures.Shipment Count","nativeQueryRef":"Shipment Count"}
+      ]}
+    }}
+  }
+}

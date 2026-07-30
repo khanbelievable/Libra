@@ -1,0 +1,87 @@
+relationship ShipmentDate
+	fromColumn: FactShipment.ShipmentDateKey
+	toColumn: DimDate.DateKey
+
+relationship InvoiceDate
+	fromColumn: FactInvoice.InvoiceDateKey
+	toColumn: DimDate.DateKey
+
+relationship CostPostingDate
+	fromColumn: FactOperationalCost.PostingDateKey
+	toColumn: DimDate.DateKey
+
+relationship BudgetMonth
+	fromColumn: FactBudget.MonthDateKey
+	toColumn: DimDate.DateKey
+
+relationship QualityExecutionDate
+	fromColumn: FactDataQualityResult.ExecutionDateKey
+	toColumn: DimDate.DateKey
+
+relationship ShipmentCountry
+	fromColumn: FactShipment.CountryKey
+	toColumn: DimCountry.CountryKey
+
+relationship InvoiceCountry
+	fromColumn: FactInvoice.CountryKey
+	toColumn: DimCountry.CountryKey
+
+relationship CostCountry
+	fromColumn: FactOperationalCost.CountryKey
+	toColumn: DimCountry.CountryKey
+
+relationship ShipmentCustomer
+	fromColumn: FactShipment.CustomerKey
+	toColumn: DimCustomer.CustomerKey
+
+relationship InvoiceCustomer
+	fromColumn: FactInvoice.CustomerKey
+	toColumn: DimCustomer.CustomerKey
+
+relationship CostCustomer
+	fromColumn: FactOperationalCost.CustomerKey
+	toColumn: DimCustomer.CustomerKey
+
+relationship ShipmentRoute
+	fromColumn: FactShipment.RouteKey
+	toColumn: DimRoute.RouteKey
+
+relationship CostRoute
+	fromColumn: FactOperationalCost.RouteKey
+	toColumn: DimRoute.RouteKey
+
+relationship InvoiceRoute
+	fromColumn: FactInvoice.RouteKey
+	toColumn: DimRoute.RouteKey
+
+relationship ShipmentCostCenter
+	fromColumn: FactShipment.CostCenterKey
+	toColumn: DimCostCenter.CostCenterKey
+
+relationship InvoiceCostCenter
+	fromColumn: FactInvoice.CostCenterKey
+	toColumn: DimCostCenter.CostCenterKey
+
+relationship CostCostCenter
+	fromColumn: FactOperationalCost.CostCenterKey
+	toColumn: DimCostCenter.CostCenterKey
+
+relationship BudgetCostCenter
+	fromColumn: FactBudget.CostCenterKey
+	toColumn: DimCostCenter.CostCenterKey
+
+relationship ShipmentCurrency
+	fromColumn: FactShipment.CurrencyKey
+	toColumn: DimCurrency.CurrencyKey
+
+relationship InvoiceCurrency
+	fromColumn: FactInvoice.CurrencyKey
+	toColumn: DimCurrency.CurrencyKey
+
+relationship CostCurrency
+	fromColumn: FactOperationalCost.CurrencyKey
+	toColumn: DimCurrency.CurrencyKey
+
+relationship BudgetCurrency
+	fromColumn: FactBudget.CurrencyKey
+	toColumn: DimCurrency.CurrencyKey

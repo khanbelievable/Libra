@@ -1,0 +1,63 @@
+table FactOperationalCost
+	column CostId
+		dataType: string
+		summarizeBy: none
+		sourceColumn: COST_ID
+	column ShipmentId
+		dataType: string
+		summarizeBy: none
+		sourceColumn: SHIPMENT_ID
+	column RouteKey
+		dataType: int64
+		isHidden
+		summarizeBy: none
+		sourceColumn: ROUTE_KEY
+	column CustomerKey
+		dataType: int64
+		isHidden
+		summarizeBy: none
+		sourceColumn: CUSTOMER_KEY
+	column CostCenterKey
+		dataType: int64
+		isHidden
+		summarizeBy: none
+		sourceColumn: COST_CENTER_KEY
+	column CountryKey
+		dataType: int64
+		isHidden
+		summarizeBy: none
+		sourceColumn: COUNTRY_KEY
+	column PostingDateKey
+		dataType: int64
+		isHidden
+		summarizeBy: none
+		sourceColumn: POSTING_DATE_KEY
+	column CostType
+		dataType: string
+		sourceColumn: COST_TYPE
+	column CurrencyKey
+		dataType: int64
+		isHidden
+		summarizeBy: none
+		sourceColumn: CURRENCY_KEY
+	column OriginalAmount
+		dataType: decimal
+		isHidden
+		summarizeBy: none
+		sourceColumn: ORIGINAL_AMOUNT
+	column FXRateToEUR
+		dataType: decimal
+		summarizeBy: none
+		sourceColumn: FX_RATE_TO_EUR
+	column AmountEUR
+		dataType: decimal
+		isHidden
+		summarizeBy: none
+		sourceColumn: AMOUNT_EUR
+	column BatchId
+		dataType: string
+		summarizeBy: none
+		sourceColumn: SOURCE_BATCH_ID
+	partition FactOperationalCost = m
+		mode: import
+		source = SnowflakeSource{[Name="FACT_OPERATIONAL_COST",Kind="View"]}[Data]
