@@ -13,6 +13,7 @@ build/
 data/generated/
 data/processed/
 data/verification/
+snowflake/packages/
 spark-warehouse/
 .idea/
 .vscode/

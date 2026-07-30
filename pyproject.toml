@@ -31,9 +31,13 @@ dev = [
   "pytest>=8.3,<9",
   "pytest-cov>=6,<7",
   "ruff>=0.11,<1",
+  "sqlglot>=30.13,<31",
 ]
 spark = [
   "pyspark>=4.0,<4.2",
+]
+snowflake = [
+  "snowflake-connector-python>=4.7,<5",
 ]
 
 [project.scripts]
@@ -41,6 +45,8 @@ libra = "datalibra.cli:main"
 libra_land_bronze = "datalibra.databricks.tasks:land_bronze"
 libra_build_silver = "datalibra.databricks.tasks:build_silver"
 libra_build_gold = "datalibra.databricks.tasks:build_gold_and_validate"
+libra_snowflake = "datalibra.snowflake.cli:main"
+libra_databricks_export = "datalibra.snowflake.export:main"
 
 [tool.setuptools]
 package-dir = {"" = "src"}
@@ -59,6 +65,7 @@ markers = [
   "contract: schema and adapter contract tests",
   "demo: executable portfolio acceptance evidence",
   "integration: tests crossing storage and domain boundaries",
+  "snowflake: authenticated Snowflake smoke tests (skipped without named connection)",
   "spark: local PySpark contract and financial parity tests",
 ]
 

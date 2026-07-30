@@ -6,4 +6,6 @@
 - `LIBRA_DQ_READER`: selects quality, quarantine summary, freshness, and reconciliation views.
 - Power BI service identity receives the two reader roles required by its workspace, never owner/loader.
 
-Actual grants and role hierarchy will be migration-tested in LIBRA-005.
+Actual grants are defined in `migrations/004_security_and_controls.sql` and contract-tested.
+Warehouse `USAGE` is deliberately environment-specific and must be granted only on the existing
+warehouse selected for deployment.
