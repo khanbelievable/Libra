@@ -1,6 +1,6 @@
 # Future Work
 
-This file records non-blocking work that is intentionally outside Milestone 1.
+This file records non-blocking work outside the active milestone.
 
 ## Databricks parity and operations
 
@@ -28,7 +28,9 @@ This file records non-blocking work that is intentionally outside Milestone 1.
 
 ## Platform roadmap
 
-- Milestone 2 implements Snowflake governed serving and Power BI. Existing files in those
-  directories are interface specifications only.
+- Snowflake external-stage automation, key-pair/OIDC service authentication, task scheduling,
+  alerting, retention, and cost monitoring require a user-approved account context.
+- Power BI deployment pipelines, service refresh credentials, accessibility testing, mobile
+  layout, and usage telemetry follow successful Desktop refresh and visual acceptance.
 - Milestone 3 covers final packaging, public release evidence, repository polish, and operational
-  release checks.
+  release checks only after every Milestone 2 external gate passes.

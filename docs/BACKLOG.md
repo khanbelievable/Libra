@@ -4,11 +4,13 @@ Status values: `DONE`, `IN PROGRESS`, `PLANNED`.
 
 ## Final delivery milestones
 
-1. **Milestone 1 — Business analytics + real Databricks execution:** local implementation and
-   Spark parity are DONE; authenticated bundle validation/deploy/run and Delta inspection are
-   pending workspace access.
-2. **Milestone 2 — Snowflake + Power BI:** PLANNED and must not begin until Milestone 1 cloud
-   evidence is complete.
+1. **Milestone 1 — Business analytics + real Databricks execution:** DONE, including
+   authenticated bundle deployment, successful execution, Delta inspection, zero-difference
+   parity, and correction evidence.
+2. **Milestone 2 — Snowflake + Power BI:** IN PROGRESS. Executable migrations, governed export
+   and loader, local SQL contracts, and a schema-valid PBIP/TMDL/PBIR project are implemented.
+   Authenticated Snowflake deploy/load/reconciliation and Power BI Desktop refresh/render checks
+   remain blocked by unavailable local authentication/software.
 3. **Milestone 3 — Final packaging and release:** PLANNED.
 
 The older LIBRA items below retain design history; Milestone 1 combines the relevant parts of
@@ -91,8 +93,7 @@ LIBRA-002, a focused LIBRA-003 demonstration, and LIBRA-004.
 - **Required tests:** local Spark tests and cloud smoke/job tests.
 - **Demo evidence:** bundle validation, job run, Delta history.
 - **Dependencies:** LIBRA-001 through LIBRA-003.
-- **Completion status:** IN PROGRESS — executable adapter, Spark contracts, and bundle are
-  implemented; authenticated workspace validation, deployment, execution, and inspection remain.
+- **Completion status:** DONE; authenticated evidence is in `docs/MILESTONE_1_VALIDATION.md`.
 
 ## LIBRA-005 — Snowflake governed serving layer
 
@@ -103,7 +104,8 @@ LIBRA-002, a focused LIBRA-003 demonstration, and LIBRA-004.
 - **Required tests:** SQL schema, grant, uniqueness, reconciliation, and query tests.
 - **Demo evidence:** migration log, grants, sample mart results.
 - **Dependencies:** LIBRA-002, LIBRA-004.
-- **Completion status:** PLANNED.
+- **Completion status:** IN PROGRESS; implementation and local contract tests are complete,
+  authenticated deployment/load/grant evidence is pending.
 
 ## LIBRA-006 — Power BI semantic/report experience
 
@@ -114,4 +116,6 @@ LIBRA-002, a focused LIBRA-003 demonstration, and LIBRA-004.
 - **Required tests:** relationship validation, DAX control totals, refresh test, visual checklist.
 - **Demo evidence:** PBIP source, screenshots, recorded measure reconciliation.
 - **Dependencies:** LIBRA-005.
-- **Completion status:** PLANNED.
+- **Completion status:** IN PROGRESS; real source artifacts, 12 tables, 22 relationships,
+  14 measures, seven pages, and data-bound visuals are present and PBIR schema validation passes.
+  Desktop refresh, DAX execution, interaction checks, and screenshots remain pending.

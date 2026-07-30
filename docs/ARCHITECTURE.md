@@ -5,8 +5,9 @@
 Regional files are landed as batch-addressed source data. Milestone 1 implements two execution
 paths: a deterministic local oracle and a deployable PySpark/Delta Databricks path. Both capture
 Bronze evidence, standardize and validate Silver, convert transaction currency to EUR, and produce
-five reconciled Gold contracts. Snowflake and Power BI remain Milestone 2 interface specifications,
-not deployed components.
+five reconciled Gold contracts. Milestone 2 implements the governed extract, Snowflake
+migrations/loader, and PBIP/TMDL/PBIR source. Snowflake deployment and Power BI runtime evidence
+are not claimed without the unavailable account/Desktop prerequisites.
 
 ## System context
 
@@ -58,7 +59,12 @@ flowchart TB
     Marts --> PBI["Power BI semantic model"]
 ```
 
-Snowflake does not repeat cleansing, FX conversion, or deduplication. It enforces load contracts, maintains warehouse keys/history where required, and serves governed SQL.
+Snowflake does not repeat cleansing, FX conversion, or deduplication. A checksum-owned CSV
+package carries approved Silver rows; the invoice comparison amount is calculated in the
+Databricks-side export using the same month-opening-rate contract as Gold. Snowflake enforces
+load contracts, resolves surrogate keys, publishes facts through natural-key MERGE statements,
+records audits/reconciliation, and serves governed SQL. Route and customer keys on serving facts
+are direct shipment lookups, not shared-cost allocations.
 
 ## Failure, quarantine, correction, and reprocessing
 

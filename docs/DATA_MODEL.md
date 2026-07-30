@@ -43,13 +43,21 @@ All costs are shipment-linked. Route and customer profitability therefore use di
 invoice revenue assigned through shipment, less every trusted cost assigned to the same shipment.
 Gold control totals must equal committed Silver invoice, operational-cost, and budget totals.
 
-## Planned finance star schema
+## Snowflake finance star schema
 
 Dimensions: `DimDate`, `DimCountry`, `DimCustomer`, `DimRoute`, `DimCostCenter`, and `DimCurrency`.
 
 Facts: `FactShipment`, `FactInvoice`, `FactOperationalCost`, `FactBudget`, and `FactDataQualityResult`.
 
-Facts keep their natural event grain. Power BI relationships are single-direction, one-to-many from dimensions to facts. Invoice revenue is the recognized revenue source for financial KPIs; shipment revenue remains an operational comparison and must not be added to invoice revenue.
+Facts keep their natural event grain, Databricks batch/fingerprint lineage, original currency
+amount, applied FX rate, translated EUR amount, and governed drill-through identifiers. Dimension
+surrogate keys are created only in Snowflake; natural keys remain unique.
+
+Power BI relationships are single-direction, one-to-many from dimensions to facts. Direct
+shipment lookups add route to invoice and customer to operational cost so route/customer margin
+filters reconcile without a bidirectional or fact-to-fact path. Invoice revenue is the recognized
+revenue source for financial KPIs; shipment revenue remains an operational comparison and must
+not be added to invoice revenue.
 
 ## Lineage and identity
 

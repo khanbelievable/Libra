@@ -57,3 +57,22 @@ Automated acceptance evidence is in `tests/demo`. Human-readable values and comm
 - The Databricks bundle contains one three-task job and no credentials.
 - Cloud validation, deployment, job execution, Delta inspection, and local/cloud comparison are
   reported independently; unavailable authentication is never presented as a successful run.
+
+## Milestone 2
+
+- Ordered Snowflake bootstrap/migrations define `LIBRA` with `CONTROL`, `LOAD`, `CORE`, and
+  `REPORTING` schemas, six dimensions, five facts, stable reporting views, load audit, and
+  reconciliation controls.
+- The governed Databricks export is deterministic, contract-versioned, checksummed, and excludes
+  credentials and workspace identity.
+- A successful source fingerprint is an unchanged no-op; changed packages publish through
+  natural-key MERGE statements and finance differences prevent a successful commit.
+- Money and rate columns use fixed-scale `NUMBER`; invoice revenue remains the recognized source.
+- Reader roles can select only their approved reporting views. The loader receives no reporting
+  reader grant and Power BI receives no owner/loader privilege.
+- The real Power BI project contains 12 model tables, single-direction dimension relationships,
+  14 approved DAX measures, seven data-bound pages, date/country slicers, and governed
+  drill-through fields.
+- Credential-free SQL, package, migration, load, semantic-model, and PBIR contracts run in CI.
+- Authenticated deployment/load, zero-difference Snowflake controls, Power BI refresh/DAX
+  execution, interaction checks, and visual review are separate blocking evidence gates.

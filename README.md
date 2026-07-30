@@ -11,7 +11,9 @@ Libra models a recurring finance-engineering problem: regional systems deliver o
 I built Libra around a fictional company, **Northstar Logistics Group**, operating in Germany,
 the Netherlands, France, the United Kingdom, and Türkiye. Milestone 1 includes a deterministic
 local oracle plus an authenticated Databricks serverless execution whose Delta results match that
-oracle exactly. Snowflake and Power BI remain specifications for Milestone 2.
+oracle exactly. Milestone 2 adds an executable Snowflake serving adapter and a real,
+source-controlled Power BI project; authenticated Snowflake deployment and Desktop refresh remain
+explicit external gates.
 
 ## What Milestone 1 proves
 
@@ -57,13 +59,17 @@ flowchart LR
 
     Bronze --> Delta["Databricks / Delta implementation"]
     Delta --> Gold
-    Delta -. governed load .-> Snowflake["Snowflake finance marts"]
-    Snowflake -. semantic model .-> PowerBI["Power BI"]
+    Delta --> Export["Governed CSV package + manifest"]
+    Export --> Snowflake["Snowflake finance star + reporting views"]
+    Snowflake --> PowerBI["Power BI PBIP / TMDL / PBIR"]
 ```
 
-The local and Databricks/Delta code paths are implemented. The dotted serving connections remain
-Milestone 2 work. Business transformations belong in Databricks/Delta; Snowflake will govern and
-serve conformed finance data; Power BI will own semantic measures and report interaction.
+The local and Databricks/Delta code paths are implemented and cloud-verified. The governed export,
+Snowflake migrations/loader, and Power BI source project are implemented and locally
+contract-validated. Business transformations remain in Databricks/Delta; Snowflake governs and
+serves conformed finance data; Power BI owns semantic measures and report interaction. See
+[Milestone 2 validation](docs/MILESTONE_2_VALIDATION.md) for the deliberately unclaimed external
+deployment and refresh gates.
 
 See [Architecture](docs/ARCHITECTURE.md) and [ADR-001](docs/adr/ADR-001-platform-responsibilities.md) for the complete rationale.
 
@@ -194,17 +200,18 @@ and the cloud-status checks recorded in
 ## Repository map
 
 ```text
-src/datalibra/       generator, trust core, Gold analytics, PySpark/Delta tasks, CLI
+src/datalibra/       trust core, Gold analytics, PySpark/Delta tasks, Snowflake adapter, CLIs
 config/              dataset keys, quality thresholds, environment settings
 tests/               unit, integration, contract, and demo evidence
 demo/                scenario instructions and expected results
 docs/                architecture, model, KPIs, quality rules, ADRs, backlog
 databricks/           executable three-task job resource and Delta runbook
-snowflake/            serving-schema and role contracts
-powerbi/              relationships, DAX measures, and report-page specifications
+snowflake/            executable migrations, governed load, controls, roles, and SQL tests
+powerbi/              real PBIP/TMDL/PBIR model, measures, pages, and report specifications
 ```
 
 Start with the [Milestone 1 validation](docs/MILESTONE_1_VALIDATION.md),
+[Milestone 2 validation](docs/MILESTONE_2_VALIDATION.md),
 [Databricks runbook](docs/DATABRICKS_RUNBOOK.md), and
 [KPI definitions](docs/KPI_DEFINITIONS.md).
 
@@ -215,8 +222,10 @@ workspace validation, deployment, healthy execution, Delta inspection, zero-diff
 local/cloud reconciliation, and the historical correction are complete. The public-safe evidence
 is recorded in [Milestone 1 validation](docs/MILESTONE_1_VALIDATION.md).
 
-Milestone 2 may now add Snowflake governed serving and Power BI; those platforms are not presented
-as deployed yet.
+Milestone 2 source implementation is present, but the milestone is not complete: this machine has
+no Snowflake connection profile and no Power BI Desktop installation. The repository therefore
+does not claim Snowflake deployment/load/reconciliation or Power BI refresh/render validation.
+Milestone 3 must not begin until those gates are completed.
 
 See the [backlog](docs/BACKLOG.md) for acceptance criteria and dependencies.
 
