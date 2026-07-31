@@ -58,6 +58,6 @@ Run `tests/reconciliation.sql`, rerun the unchanged package, and inspect grants 
 deployment complete. The expected values are 720 invoices, 2,880 costs, EUR 916,351.47 revenue,
 EUR 230,279.65 cost, EUR 686,071.82 gross profit, and EUR 3,048,056.60 budget.
 
-No authenticated Snowflake connection existed on the implementation machine. Repository and
-Databricks-package validation are real; Snowflake deployment, load, grants, and query results are
-not claimed.
+The authenticated Milestone 2 deployment, governed load, unchanged second run, live grants, and
+zero-difference controls are recorded in `docs/MILESTONE_2_VALIDATION.md`. That evidence contains
+no connection configuration, account URL, identity, credential, token, or raw package content.

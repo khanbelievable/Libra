@@ -17,6 +17,8 @@
 
 - [Milestone 1 validation](MILESTONE_1_VALIDATION.md) — local gates, cloud status, Gold controls,
   and correction evidence.
+- [Milestone 2 validation](MILESTONE_2_VALIDATION.md) — authenticated Snowflake deployment,
+  idempotent load, exact reconciliation, live grants, and the remaining Desktop gate.
 - [Databricks runbook](DATABRICKS_RUNBOOK.md) — authentication, bundle commands, Delta inspection,
   recovery, and teardown.
 - [Future work](FUTURE_WORK.md) — explicit non-blocking limitations and remaining milestones.

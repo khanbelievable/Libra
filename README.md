@@ -11,9 +11,9 @@ Libra models a recurring finance-engineering problem: regional systems deliver o
 I built Libra around a fictional company, **Northstar Logistics Group**, operating in Germany,
 the Netherlands, France, the United Kingdom, and Türkiye. Milestone 1 includes a deterministic
 local oracle plus an authenticated Databricks serverless execution whose Delta results match that
-oracle exactly. Milestone 2 adds an executable Snowflake serving adapter and a real,
-source-controlled Power BI project; authenticated Snowflake deployment and Desktop refresh remain
-explicit external gates.
+oracle exactly. Milestone 2 adds an authenticated, zero-difference Snowflake serving layer and a
+real, source-controlled Power BI project; Desktop refresh and visual review remain an explicit
+manual gate.
 
 ## What Milestone 1 proves
 
@@ -64,12 +64,13 @@ flowchart LR
     Snowflake --> PowerBI["Power BI PBIP / TMDL / PBIR"]
 ```
 
-The local and Databricks/Delta code paths are implemented and cloud-verified. The governed export,
-Snowflake migrations/loader, and Power BI source project are implemented and locally
-contract-validated. Business transformations remain in Databricks/Delta; Snowflake governs and
-serves conformed finance data; Power BI owns semantic measures and report interaction. See
-[Milestone 2 validation](docs/MILESTONE_2_VALIDATION.md) for the deliberately unclaimed external
-deployment and refresh gates.
+The local and Databricks/Delta code paths are implemented and cloud-verified. The governed export
+and Snowflake migrations/loader are authenticated, idempotency-tested, and reconciled with exact
+zero financial differences. The Power BI source project is implemented and schema-validated.
+Business transformations remain in Databricks/Delta; Snowflake governs and serves conformed
+finance data; Power BI owns semantic measures and report interaction. See
+[Milestone 2 validation](docs/MILESTONE_2_VALIDATION.md) for live Snowflake evidence and the
+deliberately unclaimed Power BI Desktop gate.
 
 See [Architecture](docs/ARCHITECTURE.md) and [ADR-001](docs/adr/ADR-001-platform-responsibilities.md) for the complete rationale.
 

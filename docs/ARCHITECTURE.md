@@ -6,8 +6,8 @@ Regional files are landed as batch-addressed source data. Milestone 1 implements
 paths: a deterministic local oracle and a deployable PySpark/Delta Databricks path. Both capture
 Bronze evidence, standardize and validate Silver, convert transaction currency to EUR, and produce
 five reconciled Gold contracts. Milestone 2 implements the governed extract, Snowflake
-migrations/loader, and PBIP/TMDL/PBIR source. Snowflake deployment and Power BI runtime evidence
-are not claimed without the unavailable account/Desktop prerequisites.
+migrations/loader, and PBIP/TMDL/PBIR source. The Snowflake serving path is authenticated and
+zero-difference validated; Power BI Desktop runtime evidence remains a separate manual gate.
 
 ## System context
 

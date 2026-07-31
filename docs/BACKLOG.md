@@ -8,9 +8,9 @@ Status values: `DONE`, `IN PROGRESS`, `PLANNED`.
    authenticated bundle deployment, successful execution, Delta inspection, zero-difference
    parity, and correction evidence.
 2. **Milestone 2 — Snowflake + Power BI:** IN PROGRESS. Executable migrations, governed export
-   and loader, local SQL contracts, and a schema-valid PBIP/TMDL/PBIR project are implemented.
-   Authenticated Snowflake deploy/load/reconciliation and Power BI Desktop refresh/render checks
-   remain blocked by unavailable local authentication/software.
+   and loader, authenticated Snowflake deployment/load/idempotency/reconciliation, and a
+   schema-valid PBIP/TMDL/PBIR project are complete. Power BI Desktop refresh, DAX execution,
+   interaction checks, and visual review remain the final manual gate.
 3. **Milestone 3 — Final packaging and release:** PLANNED.
 
 The older LIBRA items below retain design history; Milestone 1 combines the relevant parts of
