@@ -43,7 +43,7 @@ jobs:
       - name: Install project
         run: |
           python -m pip install --upgrade pip
-          python -m pip install -e ".[dev,spark]"
+          python -m pip install -e ".[dev,spark,snowflake]"
 
       - name: Lint
         run: python -m ruff check .
