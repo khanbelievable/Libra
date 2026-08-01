@@ -46,3 +46,14 @@ def test_snowflake_parameters_are_non_secret_placeholders() -> None:
     assert "LIBRA" in expressions
     assert "REPORTING" in expressions
     assert "password" not in expressions.lower()
+
+
+def test_snowflake_parameter_metadata_is_inline_for_power_bi_desktop() -> None:
+    expressions = (MODEL / "expressions.tmdl").read_text(encoding="utf-8")
+    expected = [
+        'expression SnowflakeServer = "configure-in-power-bi-desktop" meta '
+        '[IsParameterQuery=true, Type="Text", IsParameterQueryRequired=true]',
+        'expression SnowflakeWarehouse = "configure-in-power-bi-desktop" meta '
+        '[IsParameterQuery=true, Type="Text", IsParameterQueryRequired=true]',
+    ]
+    assert expressions.splitlines()[:4] == [expected[0], "", expected[1], ""]

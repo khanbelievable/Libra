@@ -1,8 +1,6 @@
-expression SnowflakeServer = "configure-in-power-bi-desktop"
-	meta [IsParameterQuery=true, Type="Text", IsParameterQueryRequired=true]
+expression SnowflakeServer = "configure-in-power-bi-desktop" meta [IsParameterQuery=true, Type="Text", IsParameterQueryRequired=true]
 
-expression SnowflakeWarehouse = "configure-in-power-bi-desktop"
-	meta [IsParameterQuery=true, Type="Text", IsParameterQueryRequired=true]
+expression SnowflakeWarehouse = "configure-in-power-bi-desktop" meta [IsParameterQuery=true, Type="Text", IsParameterQueryRequired=true]
 
 expression SnowflakeSource =
 	let
