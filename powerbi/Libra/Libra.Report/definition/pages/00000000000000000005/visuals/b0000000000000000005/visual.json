@@ -7,7 +7,7 @@
     "query": {"queryState":{
       "Category":{"projections":[{"field":{"Column":{"Expression":{"SourceRef":{"Entity":"FactOperationalCost"}},"Property":"CostType"}},"queryRef":"FactOperationalCost.CostType","nativeQueryRef":"CostType"}]},
       "Y":{"projections":[
-        {"field":{"Measure":{"Expression":{"SourceRef":{"Entity":"Measures"}},"Property":"Total Operational Cost"}},"queryRef":"Measures.Total Operational Cost","nativeQueryRef":"Total Operational Cost"}
+        {"field":{"Measure":{"Expression":{"SourceRef":{"Entity":"FinanceMeasures"}},"Property":"Total Operational Cost"}},"queryRef":"FinanceMeasures.Total Operational Cost","nativeQueryRef":"Total Operational Cost"}
       ]}
     }}
   }

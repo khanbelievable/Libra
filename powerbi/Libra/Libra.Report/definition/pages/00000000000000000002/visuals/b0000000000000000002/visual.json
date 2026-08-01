@@ -7,8 +7,8 @@
     "query": {"queryState":{
       "Category":{"projections":[{"field":{"Column":{"Expression":{"SourceRef":{"Entity":"DimCountry"}},"Property":"Country"}},"queryRef":"DimCountry.Country","nativeQueryRef":"Country"}]},
       "Y":{"projections":[
-        {"field":{"Measure":{"Expression":{"SourceRef":{"Entity":"Measures"}},"Property":"Total Revenue"}},"queryRef":"Measures.Total Revenue","nativeQueryRef":"Total Revenue"},
-        {"field":{"Measure":{"Expression":{"SourceRef":{"Entity":"Measures"}},"Property":"Gross Profit"}},"queryRef":"Measures.Gross Profit","nativeQueryRef":"Gross Profit"}
+        {"field":{"Measure":{"Expression":{"SourceRef":{"Entity":"FinanceMeasures"}},"Property":"Total Revenue"}},"queryRef":"FinanceMeasures.Total Revenue","nativeQueryRef":"Total Revenue"},
+        {"field":{"Measure":{"Expression":{"SourceRef":{"Entity":"FinanceMeasures"}},"Property":"Gross Profit"}},"queryRef":"FinanceMeasures.Gross Profit","nativeQueryRef":"Gross Profit"}
       ]}
     }}
   }

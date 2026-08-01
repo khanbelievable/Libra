@@ -7,8 +7,8 @@
     "query": {"queryState":{
       "Category":{"projections":[{"field":{"Column":{"Expression":{"SourceRef":{"Entity":"DimDate"}},"Property":"MonthStart"}},"queryRef":"DimDate.MonthStart","nativeQueryRef":"MonthStart"}]},
       "Y":{"projections":[
-        {"field":{"Measure":{"Expression":{"SourceRef":{"Entity":"Measures"}},"Property":"Total Revenue"}},"queryRef":"Measures.Total Revenue","nativeQueryRef":"Total Revenue"},
-        {"field":{"Measure":{"Expression":{"SourceRef":{"Entity":"Measures"}},"Property":"Total Operational Cost"}},"queryRef":"Measures.Total Operational Cost","nativeQueryRef":"Total Operational Cost"}
+        {"field":{"Measure":{"Expression":{"SourceRef":{"Entity":"FinanceMeasures"}},"Property":"Total Revenue"}},"queryRef":"FinanceMeasures.Total Revenue","nativeQueryRef":"Total Revenue"},
+        {"field":{"Measure":{"Expression":{"SourceRef":{"Entity":"FinanceMeasures"}},"Property":"Total Operational Cost"}},"queryRef":"FinanceMeasures.Total Operational Cost","nativeQueryRef":"Total Operational Cost"}
       ]}
     }}
   }

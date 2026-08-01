@@ -15,4 +15,4 @@ ref table FactInvoice
 ref table FactOperationalCost
 ref table FactBudget
 ref table FactDataQualityResult
-ref table Measures
+ref table FinanceMeasures

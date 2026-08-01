@@ -9,7 +9,7 @@
       {"field":{"Column":{"Expression":{"SourceRef":{"Entity":"FactDataQualityResult"}},"Property":"Dataset"}},"queryRef":"FactDataQualityResult.Dataset","nativeQueryRef":"Dataset"},
       {"field":{"Column":{"Expression":{"SourceRef":{"Entity":"FactDataQualityResult"}},"Property":"Rule"}},"queryRef":"FactDataQualityResult.Rule","nativeQueryRef":"Rule"},
       {"field":{"Column":{"Expression":{"SourceRef":{"Entity":"FactDataQualityResult"}},"Property":"ValidationStatus"}},"queryRef":"FactDataQualityResult.ValidationStatus","nativeQueryRef":"ValidationStatus"},
-      {"field":{"Measure":{"Expression":{"SourceRef":{"Entity":"Measures"}},"Property":"Failed Quality Rows"}},"queryRef":"Measures.Failed Quality Rows","nativeQueryRef":"Failed Quality Rows"}
+      {"field":{"Measure":{"Expression":{"SourceRef":{"Entity":"FinanceMeasures"}},"Property":"Failed Quality Rows"}},"queryRef":"FinanceMeasures.Failed Quality Rows","nativeQueryRef":"Failed Quality Rows"}
     ]}}}
   }
 }

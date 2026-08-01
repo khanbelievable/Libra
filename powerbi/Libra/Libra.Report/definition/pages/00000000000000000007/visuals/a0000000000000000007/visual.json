@@ -5,8 +5,8 @@
   "visual": {
     "visualType": "cardVisual",
     "query": {"queryState":{"Data":{"projections":[
-      {"field":{"Measure":{"Expression":{"SourceRef":{"Entity":"Measures"}},"Property":"Total Revenue"}},"queryRef":"Measures.Total Revenue","nativeQueryRef":"Total Revenue"},
-      {"field":{"Measure":{"Expression":{"SourceRef":{"Entity":"Measures"}},"Property":"Shipment Count"}},"queryRef":"Measures.Shipment Count","nativeQueryRef":"Shipment Count"}
+      {"field":{"Measure":{"Expression":{"SourceRef":{"Entity":"FinanceMeasures"}},"Property":"Total Revenue"}},"queryRef":"FinanceMeasures.Total Revenue","nativeQueryRef":"Total Revenue"},
+      {"field":{"Measure":{"Expression":{"SourceRef":{"Entity":"FinanceMeasures"}},"Property":"Shipment Count"}},"queryRef":"FinanceMeasures.Shipment Count","nativeQueryRef":"Shipment Count"}
     ]}}}
   }
 }

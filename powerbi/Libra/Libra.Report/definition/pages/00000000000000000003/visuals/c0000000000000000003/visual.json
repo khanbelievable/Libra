@@ -7,8 +7,8 @@
     "query": {"queryState":{
       "Category":{"projections":[{"field":{"Column":{"Expression":{"SourceRef":{"Entity":"DimRoute"}},"Property":"RouteId"}},"queryRef":"DimRoute.RouteId","nativeQueryRef":"RouteId"}]},
       "Y":{"projections":[
-        {"field":{"Measure":{"Expression":{"SourceRef":{"Entity":"Measures"}},"Property":"Total Operational Cost"}},"queryRef":"Measures.Total Operational Cost","nativeQueryRef":"Total Operational Cost"},
-        {"field":{"Measure":{"Expression":{"SourceRef":{"Entity":"Measures"}},"Property":"Shipment Count"}},"queryRef":"Measures.Shipment Count","nativeQueryRef":"Shipment Count"}
+        {"field":{"Measure":{"Expression":{"SourceRef":{"Entity":"FinanceMeasures"}},"Property":"Total Operational Cost"}},"queryRef":"FinanceMeasures.Total Operational Cost","nativeQueryRef":"Total Operational Cost"},
+        {"field":{"Measure":{"Expression":{"SourceRef":{"Entity":"FinanceMeasures"}},"Property":"Shipment Count"}},"queryRef":"FinanceMeasures.Shipment Count","nativeQueryRef":"Shipment Count"}
       ]}
     }}
   }

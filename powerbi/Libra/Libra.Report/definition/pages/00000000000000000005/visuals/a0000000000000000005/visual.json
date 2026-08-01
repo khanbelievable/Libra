@@ -5,9 +5,9 @@
   "visual": {
     "visualType": "cardVisual",
     "query": {"queryState":{"Data":{"projections":[
-      {"field":{"Measure":{"Expression":{"SourceRef":{"Entity":"Measures"}},"Property":"Total Operational Cost"}},"queryRef":"Measures.Total Operational Cost","nativeQueryRef":"Total Operational Cost"},
-      {"field":{"Measure":{"Expression":{"SourceRef":{"Entity":"Measures"}},"Property":"Cost per Shipment"}},"queryRef":"Measures.Cost per Shipment","nativeQueryRef":"Cost per Shipment"},
-      {"field":{"Measure":{"Expression":{"SourceRef":{"Entity":"Measures"}},"Property":"FX Impact"}},"queryRef":"Measures.FX Impact","nativeQueryRef":"FX Impact"}
+      {"field":{"Measure":{"Expression":{"SourceRef":{"Entity":"FinanceMeasures"}},"Property":"Total Operational Cost"}},"queryRef":"FinanceMeasures.Total Operational Cost","nativeQueryRef":"Total Operational Cost"},
+      {"field":{"Measure":{"Expression":{"SourceRef":{"Entity":"FinanceMeasures"}},"Property":"Cost per Shipment"}},"queryRef":"FinanceMeasures.Cost per Shipment","nativeQueryRef":"Cost per Shipment"},
+      {"field":{"Measure":{"Expression":{"SourceRef":{"Entity":"FinanceMeasures"}},"Property":"FX Impact"}},"queryRef":"FinanceMeasures.FX Impact","nativeQueryRef":"FX Impact"}
     ]}}}
   }
 }

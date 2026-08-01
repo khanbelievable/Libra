@@ -5,9 +5,9 @@
   "visual": {
     "visualType": "cardVisual",
     "query": {"queryState":{"Data":{"projections":[
-      {"field":{"Measure":{"Expression":{"SourceRef":{"Entity":"Measures"}},"Property":"Total Revenue"}},"queryRef":"Measures.Total Revenue","nativeQueryRef":"Total Revenue"},
-      {"field":{"Measure":{"Expression":{"SourceRef":{"Entity":"Measures"}},"Property":"Total Operational Cost"}},"queryRef":"Measures.Total Operational Cost","nativeQueryRef":"Total Operational Cost"},
-      {"field":{"Measure":{"Expression":{"SourceRef":{"Entity":"Measures"}},"Property":"Gross Profit"}},"queryRef":"Measures.Gross Profit","nativeQueryRef":"Gross Profit"}
+      {"field":{"Measure":{"Expression":{"SourceRef":{"Entity":"FinanceMeasures"}},"Property":"Total Revenue"}},"queryRef":"FinanceMeasures.Total Revenue","nativeQueryRef":"Total Revenue"},
+      {"field":{"Measure":{"Expression":{"SourceRef":{"Entity":"FinanceMeasures"}},"Property":"Total Operational Cost"}},"queryRef":"FinanceMeasures.Total Operational Cost","nativeQueryRef":"Total Operational Cost"},
+      {"field":{"Measure":{"Expression":{"SourceRef":{"Entity":"FinanceMeasures"}},"Property":"Gross Profit"}},"queryRef":"FinanceMeasures.Gross Profit","nativeQueryRef":"Gross Profit"}
     ]}}}
   }
 }

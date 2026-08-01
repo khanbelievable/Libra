@@ -1,4 +1,4 @@
-table Measures
+table FinanceMeasures
 
 	/// Recognized invoice revenue translated by the approved Databricks FX rate.
 	measure 'Total Revenue' = COALESCE(SUM(FactInvoice[AmountEUR]), 0)
@@ -48,6 +48,6 @@ table Measures
 		isHidden
 		sourceColumn: Value
 
-	partition Measures = calculated
+	partition FinanceMeasures = calculated
 		mode: import
-		source = DATATABLE("Value", STRING, {{"Measures"}})
+		source = DATATABLE("Value", STRING, {{"FinanceMeasures"}})

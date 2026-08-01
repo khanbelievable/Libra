@@ -5,9 +5,9 @@
   "visual": {
     "visualType": "cardVisual",
     "query": {"queryState":{"Data":{"projections":[
-      {"field":{"Measure":{"Expression":{"SourceRef":{"Entity":"Measures"}},"Property":"Budget Variance Amount"}},"queryRef":"Measures.Budget Variance Amount","nativeQueryRef":"Budget Variance Amount"},
-      {"field":{"Measure":{"Expression":{"SourceRef":{"Entity":"Measures"}},"Property":"Failed Quality Rows"}},"queryRef":"Measures.Failed Quality Rows","nativeQueryRef":"Failed Quality Rows"},
-      {"field":{"Measure":{"Expression":{"SourceRef":{"Entity":"Measures"}},"Property":"Latest Successful Refresh"}},"queryRef":"Measures.Latest Successful Refresh","nativeQueryRef":"Latest Successful Refresh"}
+      {"field":{"Measure":{"Expression":{"SourceRef":{"Entity":"FinanceMeasures"}},"Property":"Budget Variance Amount"}},"queryRef":"FinanceMeasures.Budget Variance Amount","nativeQueryRef":"Budget Variance Amount"},
+      {"field":{"Measure":{"Expression":{"SourceRef":{"Entity":"FinanceMeasures"}},"Property":"Failed Quality Rows"}},"queryRef":"FinanceMeasures.Failed Quality Rows","nativeQueryRef":"Failed Quality Rows"},
+      {"field":{"Measure":{"Expression":{"SourceRef":{"Entity":"FinanceMeasures"}},"Property":"Latest Successful Refresh"}},"queryRef":"FinanceMeasures.Latest Successful Refresh","nativeQueryRef":"Latest Successful Refresh"}
     ]}}}
   }
 }

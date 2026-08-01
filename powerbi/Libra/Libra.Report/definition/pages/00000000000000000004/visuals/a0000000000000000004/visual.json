@@ -5,10 +5,10 @@
   "visual": {
     "visualType": "cardVisual",
     "query": {"queryState":{"Data":{"projections":[
-      {"field":{"Measure":{"Expression":{"SourceRef":{"Entity":"Measures"}},"Property":"Budget Amount"}},"queryRef":"Measures.Budget Amount","nativeQueryRef":"Budget Amount"},
-      {"field":{"Measure":{"Expression":{"SourceRef":{"Entity":"Measures"}},"Property":"Actual Cost"}},"queryRef":"Measures.Actual Cost","nativeQueryRef":"Actual Cost"},
-      {"field":{"Measure":{"Expression":{"SourceRef":{"Entity":"Measures"}},"Property":"Budget Variance Amount"}},"queryRef":"Measures.Budget Variance Amount","nativeQueryRef":"Budget Variance Amount"},
-      {"field":{"Measure":{"Expression":{"SourceRef":{"Entity":"Measures"}},"Property":"Budget Variance Percentage"}},"queryRef":"Measures.Budget Variance Percentage","nativeQueryRef":"Budget Variance Percentage"}
+      {"field":{"Measure":{"Expression":{"SourceRef":{"Entity":"FinanceMeasures"}},"Property":"Budget Amount"}},"queryRef":"FinanceMeasures.Budget Amount","nativeQueryRef":"Budget Amount"},
+      {"field":{"Measure":{"Expression":{"SourceRef":{"Entity":"FinanceMeasures"}},"Property":"Actual Cost"}},"queryRef":"FinanceMeasures.Actual Cost","nativeQueryRef":"Actual Cost"},
+      {"field":{"Measure":{"Expression":{"SourceRef":{"Entity":"FinanceMeasures"}},"Property":"Budget Variance Amount"}},"queryRef":"FinanceMeasures.Budget Variance Amount","nativeQueryRef":"Budget Variance Amount"},
+      {"field":{"Measure":{"Expression":{"SourceRef":{"Entity":"FinanceMeasures"}},"Property":"Budget Variance Percentage"}},"queryRef":"FinanceMeasures.Budget Variance Percentage","nativeQueryRef":"Budget Variance Percentage"}
     ]}}}
   }
 }

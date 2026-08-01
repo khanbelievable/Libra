@@ -7,9 +7,9 @@
     "query": {"queryState":{
       "Category":{"projections":[{"field":{"Column":{"Expression":{"SourceRef":{"Entity":"DimCostCenter"}},"Property":"CostCenter"}},"queryRef":"DimCostCenter.CostCenter","nativeQueryRef":"CostCenter"}]},
       "Y":{"projections":[
-        {"field":{"Measure":{"Expression":{"SourceRef":{"Entity":"Measures"}},"Property":"Budget Amount"}},"queryRef":"Measures.Budget Amount","nativeQueryRef":"Budget Amount"},
-        {"field":{"Measure":{"Expression":{"SourceRef":{"Entity":"Measures"}},"Property":"Actual Cost"}},"queryRef":"Measures.Actual Cost","nativeQueryRef":"Actual Cost"},
-        {"field":{"Measure":{"Expression":{"SourceRef":{"Entity":"Measures"}},"Property":"Budget Variance Amount"}},"queryRef":"Measures.Budget Variance Amount","nativeQueryRef":"Budget Variance Amount"}
+        {"field":{"Measure":{"Expression":{"SourceRef":{"Entity":"FinanceMeasures"}},"Property":"Budget Amount"}},"queryRef":"FinanceMeasures.Budget Amount","nativeQueryRef":"Budget Amount"},
+        {"field":{"Measure":{"Expression":{"SourceRef":{"Entity":"FinanceMeasures"}},"Property":"Actual Cost"}},"queryRef":"FinanceMeasures.Actual Cost","nativeQueryRef":"Actual Cost"},
+        {"field":{"Measure":{"Expression":{"SourceRef":{"Entity":"FinanceMeasures"}},"Property":"Budget Variance Amount"}},"queryRef":"FinanceMeasures.Budget Variance Amount","nativeQueryRef":"Budget Variance Amount"}
       ]}
     }}
   }
